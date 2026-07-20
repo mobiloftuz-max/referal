@@ -37,8 +37,6 @@ EMOJI_WALLET = "5438341604928232979"     # Wallet
 
 # --- FSM States ---
 class Form(StatesGroup):
-    waiting_for_wallet = State()
-    waiting_for_withdrawal = State()
     # Admin States
     waiting_for_channel_id = State()
     waiting_for_channel_title = State()
@@ -100,9 +98,9 @@ async def get_main_menu_keyboard(user_id: int):
                 icon_custom_emoji_id=EMOJI_LEADER
             ),
             InlineKeyboardButton(
-                text="💼 Hamyon / Balans",
-                callback_data="menu_wallet",
-                icon_custom_emoji_id=EMOJI_WALLET
+                text="🔑 Kursga kirish",
+                callback_data="menu_course",
+                icon_custom_emoji_id=EMOJI_STAR
             )
         ]
     ]
@@ -272,13 +270,14 @@ async def callback_check_subs(callback: CallbackQuery, bot: Bot):
             if referrer and not referrer["is_banned"]:
                 pts_per_ref = int(await db.get_setting("points_per_referral", 1))
                 new_points = referrer["points"] + pts_per_ref
-                await db.update_user(ref_id, points=new_points)
+                new_ref_count = (referrer.get("referral_count") or 0) + 1
+                await db.update_user(ref_id, points=new_points, referral_count=new_ref_count)
                 
                 # Notify referrer
                 try:
                     await bot.send_message(
                         chat_id=ref_id,
-                        text=f"🎉 Tabriklaymiz! Siz taklif qilgan {callback.from_user.first_name} obunalarni tasdiqladi.\nSizga +{pts_per_ref} ball taqdim etildi! Hozirgi balansingiz: {new_points} ball."
+                        text=f"🎉 Tabriklaymiz! Siz taklif qilgan {callback.from_user.first_name} obunalarni tasdiqladi.\nSizga +{pts_per_ref} ball taqdim etildi! Hozirgi takliflaringiz soni: {new_ref_count} ta."
                     )
                 except Exception as e:
                     logger.warning(f"Could not notify referrer {ref_id}: {e}")
@@ -382,243 +381,65 @@ async def callback_leaderboard(callback: CallbackQuery):
             points = row.get("points", 0)
             text += f"{medal} <b>{name}</b>{username_str} — <b>{points} ball</b>\n"
             
+    await callback.message.edit_text(@router.callback_query(F.data == "menu_course")
+async def callback_course(callback: CallbackQuery, bot: Bot):
+    user_id = callback.from_user.id
+    user = await db.get_user(user_id)
+    
+    if not user:
+        return
+        
+    referral_count = user.get("referral_count") or 0
+    points = user.get("points", 0)
+    effective_count = max(referral_count, points)
+    
+    threshold = int(await db.get_setting("referral_threshold", 5))
+    
+    if effective_count >= threshold:
+        # Generate single-use invite link
+        if PRIVATE_CHANNEL_ID:
+            try:
+                # Create chat invite link
+                link_obj = await bot.create_chat_invite_link(
+                    chat_id=PRIVATE_CHANNEL_ID,
+                    member_limit=1,
+                    name=f"Foydalanuvchi {user_id} uchun"
+                )
+                invite_link = link_obj.invite_link
+                text = (
+                    f"🎉 <b>Tabriklaymiz! Siz yopiq kanalga kirish huquqini qo'lga kiritdingiz!</b>\n\n"
+                    f"Taklif qilgan do'stlaringiz soni: <b>{effective_count} ta</b> (Talab etilgan: {threshold} ta)\n\n"
+                    f"🔑 <b>Kursga kirish havolasi:</b>\n{invite_link}\n\n"
+                    f"⚠️ <i>Eslatma: Ushbu havola faqat bitta foydalanuvchi uchun mo'ljallangan va bir marta ishlatilgandan so'ng faolsizlanadi!</i>"
+                )
+            except Exception as e:
+                logger.error(f"Error creating invite link: {e}")
+                # Fallback to direct link or admin message if bot lacks admin permissions
+                text = (
+                    f"🎉 <b>Tabriklaymiz! Siz yopiq kanalga kirish huquqini qo'lga kiritdingiz!</b>\n\n"
+                    f"Taklif qilgan do'stlaringiz soni: <b>{effective_count} ta</b> (Talab etilgan: {threshold} ta)\n\n"
+                    f"🔑 Bizning kursimiz yopiq kanalda joylashgan. Kanal havolasini olish uchun administrator bilan bog'laning."
+                )
+        else:
+            text = (
+                f"🎉 <b>Tabriklaymiz! Siz yopiq kanalga kirish huquqini qo'lga kiritdingiz!</b>\n\n"
+                f"Taklif qilgan do'stlaringiz soni: <b>{effective_count} ta</b> (Talab etilgan: {threshold} ta)\n\n"
+                f"⚠️ Hozircha yopiq kanal ID-si sozlanmagan. Iltimos, administratorga xabar bering."
+            )
+    else:
+        text = (
+            f"🔒 <b>Kurs yopiq kanalda joylashgan!</b>\n\n"
+            f"Unga kirish uchun kamida <b>{threshold} ta</b> faol do'stingizni taklif qilishingiz kerak.\n"
+            f"Siz taklif qilgan faol a'zolar: <b>{effective_count} / {threshold}</b>\n\n"
+            f"🔗 Taklif havolangiz:\n<code>https://t.me/{BOT_USERNAME}?start={user_id}</code>\n\n"
+            f"Do'stlaringizni taklif qiling va kursga bepul kirishga ega bo'ling!"
+        )
+        
     await callback.message.edit_text(
         text=text,
         parse_mode="HTML",
         reply_markup=get_back_keyboard()
     )
-
-@router.callback_query(F.data == "menu_wallet")
-async def callback_wallet(callback: CallbackQuery):
-    user_id = callback.from_user.id
-    user = await db.get_user(user_id)
-    
-    if not user:
-        return
-        
-    wallet_str = user.get("wallet") or "Bog'lanmagan ⚠️"
-    points = user.get("points", 0)
-    min_points = int(await db.get_setting("min_withdrawal_points", 5))
-    
-    text = (
-        f"💼 <b>Sizning Balansingiz:</b>\n\n"
-        f"💰 Jamg'arilgan ballar: <b>{points} ball</b>\n"
-        f"💳 Hamyon (USDT/TRX): <code>{wallet_str}</code>\n\n"
-        f"• Minimal pul yechish summasi: <b>{min_points} ball</b>\n"
-    )
-    
-    buttons = [
-        [
-            InlineKeyboardButton(text="💳 Hamyonni bog'lash", callback_data="wallet_setup", style="primary"),
-            InlineKeyboardButton(text="💸 Pul yechish", callback_data="wallet_withdraw", style="success")
-        ],
-        [
-            InlineKeyboardButton(text="⬅️ Ortga", callback_data="main_menu", style="danger")
-        ]
-    ]
-    
-    await callback.message.edit_text(
-        text=text,
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
-    )
-
-@router.callback_query(F.data == "wallet_setup")
-async def callback_wallet_setup(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text(
-        text="💳 USDT (TRC-20) yoki TRX hamyon manzilingizni yuboring:",
-        reply_markup=get_back_keyboard("menu_wallet")
-    )
-    await state.set_state(Form.waiting_for_wallet)
-
-@router.message(Form.waiting_for_wallet)
-async def process_wallet_input(message: Message, state: FSMContext):
-    user_id = message.from_user.id
-    wallet_address = message.text.strip()
-    
-    if len(wallet_address) < 20 or not any(wallet_address.startswith(x) for x in ['T', 'U', '0x']):
-        await message.answer("⚠️ Hamyon manzili noto'g'ri ko'rinadi. Iltimos, haqiqiy TRX/USDT (TRC20) manzilini kiriting:")
-        return
-        
-    await db.update_user(user_id, wallet=wallet_address)
-    await state.clear()
-    
-    kb = await get_main_menu_keyboard(user_id)
-    await message.answer(
-        f"✅ Hamyon manzilingiz muvaffaqiyatli bog'landi: <code>{wallet_address}</code>",
-        parse_mode="HTML",
-        reply_markup=kb
-    )
-
-@router.callback_query(F.data == "wallet_withdraw")
-async def callback_wallet_withdraw(callback: CallbackQuery, state: FSMContext):
-    user_id = callback.from_user.id
-    user = await db.get_user(user_id)
-    
-    if not user:
-        return
-        
-    points = user.get("points", 0)
-    wallet = user.get("wallet")
-    min_points = int(await db.get_setting("min_withdrawal_points", 5))
-    
-    if not wallet:
-        await callback.answer("⚠️ Iltimos, avval hamyon manzilingizni bog'lang.", show_alert=True)
-        return
-        
-    if points < min_points:
-        await callback.answer(f"⚠️ Ballar yetarli emas. Minimal pul yechish: {min_points} ball. Sizda: {points} ball.", show_alert=True)
-        return
-        
-    await callback.message.edit_text(
-        text=f"💸 Yechib olmoqchi bo'lgan ballaringiz miqdorini kiriting (maksimum: {points}):",
-        reply_markup=get_back_keyboard("menu_wallet")
-    )
-    await state.set_state(Form.waiting_for_withdrawal)
-
-@router.message(Form.waiting_for_withdrawal)
-async def process_withdrawal_amount(message: Message, state: FSMContext, bot: Bot):
-    user_id = message.from_user.id
-    user = await db.get_user(user_id)
-    
-    if not user:
-        await state.clear()
-        return
-        
-    try:
-        amount = float(message.text.strip())
-    except ValueError:
-        await message.answer("⚠️ Iltimos, faqat butun yoki o'nlik raqam kiriting:")
-        return
-        
-    points = user.get("points", 0)
-    min_points = int(await db.get_setting("min_withdrawal_points", 5))
-    
-    if amount < min_points:
-        await message.answer(f"⚠️ Minimal yechib olish summasi {min_points} ball. Iltimos, kattaroq miqdor kiriting:")
-        return
-        
-    if amount > points:
-        await message.answer(f"⚠️ Balansingizda yetarli ball yo'q. Maksimal yechish: {points} ball. Qayta kiriting:")
-        return
-        
-    await state.clear()
-    
-    new_points = points - amount
-    await db.update_user(user_id, points=new_points)
-    
-    withdr = await db.create_withdrawal(user_id, user["wallet"], amount)
-    w_id = withdr["id"]
-    
-    kb = await get_main_menu_keyboard(user_id)
-    await message.answer(
-        f"✅ Yechib olish so'rovi muvaffaqiyatli yuborildi!\n"
-        f"Summa: {amount} ball\nHamyon: <code>{user['wallet']}</code>\n"
-        f"So'rov adminlar tomonidan tekshiriladi.",
-        parse_mode="HTML",
-        reply_markup=kb
-    )
-    
-    admin_group_text = (
-        f"🔔 <b>YANGI YECHIB OLISH SO'ROVI (ID: #{w_id})</b>\n\n"
-        f"👤 Foydalanuvchi: {message.from_user.first_name} (@{message.from_user.username or 'yoq'})\n"
-        f"🆔 Telegram ID: <code>{user_id}</code>\n"
-        f"💰 Miqdor: <b>{amount} ball</b>\n"
-        f"💳 Hamyon: <code>{user['wallet']}</code>\n"
-        f"🤖 Spam ehtimoli: <b>{user.get('cheat_score', 0.0)*100:.1f}%</b>"
-    )
-    
-    admin_kb = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="🟢 Tasdiqlash (Pay)", callback_data=f"withdraw_approve:{w_id}", style="success"),
-            InlineKeyboardButton(text="🔴 Rad etish", callback_data=f"withdraw_reject:{w_id}", style="danger")
-        ]
-    ])
-    
-    if PRIVATE_CHANNEL_ID:
-        try:
-            await bot.send_message(chat_id=PRIVATE_CHANNEL_ID, text=admin_group_text, parse_mode="HTML", reply_markup=admin_kb)
-        except Exception as e:
-            logger.error(f"Failed to send withdrawal request to Private Channel: {e}")
-            for admin_id in ADMIN_IDS:
-                try:
-                    await bot.send_message(chat_id=admin_id, text=admin_group_text, parse_mode="HTML", reply_markup=admin_kb)
-                except Exception:
-                    pass
-    else:
-        for admin_id in ADMIN_IDS:
-            try:
-                await bot.send_message(chat_id=admin_id, text=admin_group_text, parse_mode="HTML", reply_markup=admin_kb)
-            except Exception:
-                pass
-
-# --- Admin Withdrawal Approvals ---
-@router.callback_query(F.data.startswith("withdraw_approve:"))
-async def callback_withdraw_approve(callback: CallbackQuery, bot: Bot):
-    w_id = int(callback.data.split(":")[1])
-    w = await db.get_withdrawal(w_id)
-    
-    if not w:
-        await callback.answer("So'rov topilmadi.", show_alert=True)
-        return
-        
-    if w["status"] != "pending":
-        await callback.answer(f"Bu so'rov allaqachon '{w['status']}' holatida.", show_alert=True)
-        return
-        
-    await db.update_withdrawal_status(w_id, "approved")
-    await callback.answer("Yechib olish tasdiqlandi. To'lov amalga oshirildi! ✅", show_alert=True)
-    
-    await callback.message.edit_text(
-        text=callback.message.text + f"\n\n✅ <b>TASDIQLANDI</b> (Admin: {callback.from_user.first_name})",
-        parse_mode="HTML",
-        reply_markup=None
-    )
-    
-    try:
-        await bot.send_message(
-            chat_id=w["tg_id"],
-            text=f"🎉 Tabriklaymiz! Sizning #{w_id}-raqamli {w['amount']} ballik pul yechish so'rovingiz tasdiqlandi va hamyoningizga o'tkazildi!"
-        )
-    except Exception:
-        pass
-
-@router.callback_query(F.data.startswith("withdraw_reject:"))
-async def callback_withdraw_reject(callback: CallbackQuery, bot: Bot):
-    w_id = int(callback.data.split(":")[1])
-    w = await db.get_withdrawal(w_id)
-    
-    if not w:
-        await callback.answer("So'rov topilmadi.", show_alert=True)
-        return
-        
-    if w["status"] != "pending":
-        await callback.answer(f"Bu so'rov allaqachon '{w['status']}' holatida.", show_alert=True)
-        return
-        
-    await db.update_withdrawal_status(w_id, "rejected")
-    
-    user_id = w["tg_id"]
-    user = await db.get_user(user_id)
-    if user:
-        refunded_pts = user["points"] + float(w["amount"])
-        await db.update_user(user_id, points=refunded_pts)
-        
-    await callback.answer("Yechib olish rad etildi, ballar qaytarildi! ❌", show_alert=True)
-    
-    await callback.message.edit_text(
-        text=callback.message.text + f"\n\n❌ <b>RAD ETILDI</b> (Admin: {callback.from_user.first_name})",
-        parse_mode="HTML",
-        reply_markup=None
-    )
-    
-    try:
-        await bot.send_message(
-            chat_id=w["tg_id"],
-            text=f"❌ Sizning #{w_id}-raqamli pul yechish so'rovingiz rad etildi. Ballar balansingizga qaytarildi."
-        )
-    except Exception:
-        pass
 
 
 # --- Admin Panel Handlers ---
@@ -664,8 +485,7 @@ async def callback_admin_stats(callback: CallbackQuery):
         f"👥 Ro'yxatdan o'tgan foydalanuvchilar: <b>{stats['total_users']} ta</b>\n"
         f"✅ Tasdiqlangan faol ishtirokchilar: <b>{stats['verified_users']} ta</b>\n"
         f"🚫 Cheat sababli bloklanganlar: <b>{stats['banned_users']} ta</b>\n"
-        f"💸 Tasdiqlangan jami to'lovlar: <b>{stats['total_withdrawn']} ball</b>\n"
-        f"⏳ Kutilayotgan pul yechish so'rovlari: <b>{stats['pending_withdrawals']} ta</b>"
+        f"🔑 Kursga kirish huquqini ochganlar: <b>{stats['course_unlocked_users']} ta</b>"
     )
     
     await callback.message.edit_text(text=text, parse_mode="HTML", reply_markup=get_back_keyboard("admin_menu"))

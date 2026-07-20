@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS settings (
 -- 5. Insert Default Settings if they do not exist
 INSERT INTO settings (key, value) VALUES
 ('contest_active', 'true'),
-('min_withdrawal_points', '5'),
+('referral_threshold', '5'),
 ('points_per_referral', '1'),
 ('daily_bonus_points', '1')
 ON CONFLICT (key) DO NOTHING;

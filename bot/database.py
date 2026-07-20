@@ -169,28 +169,29 @@ async def update_withdrawal_status(withdrawal_id, status):
 
 # --- Admin Operations (Stats, Reset, Export) ---
 def _get_statistics_sync():
-    users_res = client.table("users").select("is_banned, is_verified").execute()
-    withdrawals_res = client.table("withdrawals").select("status, amount").execute()
+    users_res = client.table("users").select("is_banned, is_verified, referral_count, points").execute()
     
     total_users = len(users_res.data) if users_res.data else 0
     verified_users = sum(1 for u in users_res.data if u["is_verified"]) if users_res.data else 0
     banned_users = sum(1 for u in users_res.data if u["is_banned"]) if users_res.data else 0
     
-    total_withdrawn_approved = 0.0
-    pending_withdrawals = 0
-    if withdrawals_res.data:
-        for w in withdrawals_res.data:
-            if w["status"] == "approved":
-                total_withdrawn_approved += float(w["amount"])
-            elif w["status"] == "pending":
-                pending_withdrawals += 1
+    # Fetch threshold
+    th_res = client.table("settings").select("value").eq("key", "referral_threshold").execute()
+    threshold = int(th_res.data[0]["value"]) if th_res.data else 5
+    
+    course_unlocked = 0
+    if users_res.data:
+        for u in users_res.data:
+            ref_c = u.get("referral_count") or 0
+            pts = u.get("points") or 0
+            if ref_c >= threshold or pts >= threshold:
+                course_unlocked += 1
                 
     return {
         "total_users": total_users,
         "verified_users": verified_users,
         "banned_users": banned_users,
-        "total_withdrawn": total_withdrawn_approved,
-        "pending_withdrawals": pending_withdrawals
+        "course_unlocked_users": course_unlocked
     }
 
 async def get_statistics():

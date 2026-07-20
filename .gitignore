@@ -46,6 +46,7 @@ bot/inspect_render_events.py
 bot/inspect_render_service.py
 bot/update_render_service.py
 bot/configure_vercel.py
+bot/seed_threshold.py
 bot.log
 
 
