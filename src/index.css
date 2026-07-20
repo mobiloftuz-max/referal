@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+@theme {
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-bounce-slow: bounce 2s infinite;
+  --animate-fade-in: fadeIn 0.4s ease-out forwards;
+  --animate-scale-in: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  
+  @keyframes fadeIn {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scaleIn {
+    0% { opacity: 0; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #121318;
+}
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* Base override for #root to support nice fullscreen layout */
+#root {
+  width: 100%;
+  max-width: 100% !important;
+  margin: 0 !important;
+  text-align: left !important;
+  border-inline: none !important;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Glassmorphism Styles (Matte Finish) */
+.glass-panel {
+  background: rgba(26, 28, 35, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-heavy {
+  background: rgba(18, 19, 24, 0.9);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Claymorphic Buttons (3D Matte Feel, Inset Shadows) */
+.btn-clay {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    inset 2px 2px 4px rgba(255, 255, 255, 0.12),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.35),
+    0 4px 6px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+.btn-clay:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    inset 3px 3px 5px rgba(255, 255, 255, 0.18),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.45),
+    0 6px 10px rgba(0, 0, 0, 0.3);
+}
+.btn-clay:active:not(:disabled) {
+  transform: scale(0.97) translateY(1px);
+  box-shadow: 
+    inset 1px 1px 2px rgba(255, 255, 255, 0.08),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.25),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.btn-clay-blue {
+  background: #1e40af;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    inset 2px 2px 4px rgba(255, 255, 255, 0.25),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.45),
+    0 4px 6px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+.btn-clay-blue:hover:not(:disabled) {
+  background: #2563eb;
+  box-shadow: 
+    inset 3px 3px 5px rgba(255, 255, 255, 0.3),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.55),
+    0 6px 10px rgba(0, 0, 0, 0.3);
+}
+.btn-clay-blue:active:not(:disabled) {
+  transform: scale(0.97) translateY(1px);
+  box-shadow: 
+    inset 1px 1px 2px rgba(255, 255, 255, 0.15),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.35),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.btn-clay-crimson {
+  background: #991b1b;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    inset 2px 2px 4px rgba(255, 255, 255, 0.25),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.45),
+    0 4px 6px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+.btn-clay-crimson:hover:not(:disabled) {
+  background: #b91c1c;
+  box-shadow: 
+    inset 3px 3px 5px rgba(255, 255, 255, 0.3),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.55),
+    0 6px 10px rgba(0, 0, 0, 0.3);
+}
+.btn-clay-crimson:active:not(:disabled) {
+  transform: scale(0.97) translateY(1px);
+  box-shadow: 
+    inset 1px 1px 2px rgba(255, 255, 255, 0.15),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.35),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.btn-clay-gold {
+  background: #b45309;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    inset 2px 2px 4px rgba(255, 255, 255, 0.25),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.45),
+    0 4px 6px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+.btn-clay-gold:hover:not(:disabled) {
+  background: #d97706;
+  box-shadow: 
+    inset 3px 3px 5px rgba(255, 255, 255, 0.3),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.55),
+    0 6px 10px rgba(0, 0, 0, 0.3);
+}
+.btn-clay-gold:active:not(:disabled) {
+  transform: scale(0.97) translateY(1px);
+  box-shadow: 
+    inset 1px 1px 2px rgba(255, 255, 255, 0.15),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.35),
+    0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Animations */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.2s ease-in-out infinite;
+}
+
+.animate-fade-in-up {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
