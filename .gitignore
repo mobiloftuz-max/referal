@@ -36,4 +36,17 @@ bot/pooler_config.txt
 bot/test_postgres.py
 bot/find_pooler.py
 bot/ip_geomap.py
+bot/deploy_render.py
+bot/check_render.py
+bot/inspect_entire_events.py
+bot/inspect_entire_service.py
+bot/inspect_render_deploy.py
+bot/inspect_render_env.py
+bot/inspect_render_events.py
+bot/inspect_render_service.py
+bot/update_render_service.py
+bot/configure_vercel.py
 bot.log
+
+
+.vercel
