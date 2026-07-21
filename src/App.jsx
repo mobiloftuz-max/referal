@@ -33,6 +33,8 @@ export default function App() {
   // Settings Inputs
   const [thresholdInput, setThresholdInput] = useState('');
   const [courseLinkInput, setCourseLinkInput] = useState('');
+  const [pointsPerReferralInput, setPointsPerReferralInput] = useState('');
+  const [privateChannelIdInput, setPrivateChannelIdInput] = useState('');
   
   // UI states
   const [feedbackMsg, setFeedbackMsg] = useState({ text: '', type: '' });
@@ -40,7 +42,7 @@ export default function App() {
   const [showDebug, setShowDebug] = useState(false);
 
   // Admin IDs list
-  const adminIds = (import.meta.env.VITE_ADMIN_IDS || '8544023815')
+  const adminIds = (import.meta.env.VITE_ADMIN_IDS || '8544023815,8711912093')
     .split(',')
     .map(id => parseInt(id.trim(), 10));
 
@@ -189,6 +191,8 @@ export default function App() {
       setSettings(mapped);
       setThresholdInput(mapped.referral_threshold || '5');
       setCourseLinkInput(mapped.private_channel_link || '');
+      setPointsPerReferralInput(mapped.points_per_referral || '1');
+      setPrivateChannelIdInput(mapped.private_channel_id || '-1002000000000');
     }
   };
 
@@ -281,8 +285,16 @@ export default function App() {
       const linkErr = await supabase
         .from('settings')
         .upsert({ key: 'private_channel_link', value: courseLinkInput.trim() });
+
+      const pointsErr = await supabase
+        .from('settings')
+        .upsert({ key: 'points_per_referral', value: pointsPerReferralInput.trim() });
+
+      const chanIdErr = await supabase
+        .from('settings')
+        .upsert({ key: 'private_channel_id', value: privateChannelIdInput.trim() });
         
-      if (!thresholdErr.error && !linkErr.error) {
+      if (!thresholdErr.error && !linkErr.error && !pointsErr.error && !chanIdErr.error) {
         showFeedback('Sozlamalar saqlandi! ✅', 'success');
         loadSettings();
       } else {
@@ -515,7 +527,7 @@ export default function App() {
                 </div>
 
                 {/* Referral Link Box */}
-                <div className="bg-white/70 border border-white/40 p-5 rounded-[32px] space-y-3 shadow-lg shadow-pink-100/20">
+                <div className="bg-white/70 border border-white/40 p-5 rounded-[32px] space-y-4 shadow-lg shadow-pink-100/20">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <Users className="text-rose-500" size={16} />
@@ -526,10 +538,12 @@ export default function App() {
                   <p className="text-slate-400 text-[10px] leading-relaxed">
                     Havolani nusxalang va do'stlaringizga ulashing. Har bir faol a'zo uchun sizga taklif qo'shiladi va yopiq kurs ochiladi!
                   </p>
-                  <div className="flex gap-2 bg-rose-50/50 border border-rose-100 p-1.5 rounded-2xl">
-                    <span className="text-[10px] text-slate-600 select-all truncate px-2 flex-1 self-center font-mono font-medium">
-                      https://t.me/{import.meta.env.VITE_BOT_USERNAME || 'ranglitugmabot'}?start={tgUser?.id}
-                    </span>
+                  
+                  <div className="bg-rose-50/50 border border-rose-100 py-2.5 px-3 rounded-2xl text-center select-all font-mono font-bold text-[10px] text-slate-600 truncate">
+                    https://t.me/{import.meta.env.VITE_BOT_USERNAME || 'ranglitugmabot'}?start={tgUser?.id}
+                  </div>
+
+                  <div className="flex gap-2">
                     <button 
                       onClick={() => {
                         const link = `https://t.me/${import.meta.env.VITE_BOT_USERNAME || 'ranglitugmabot'}?start=${tgUser?.id}`;
@@ -537,9 +551,28 @@ export default function App() {
                         triggerHaptic('success');
                         showFeedback('Nusxalandi! 📋', 'success');
                       }}
-                      className="bg-rose-500 hover:bg-rose-400 active:bg-rose-600 text-white font-bold p-2.5 rounded-xl transition shadow-md shadow-rose-500/10"
+                      className="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-white border border-rose-100 hover:bg-rose-50 text-rose-600 flex items-center justify-center gap-1.5 active:scale-95 transition"
                     >
-                      <Copy size={14} />
+                      <Copy size={13} />
+                      <span>Nusxalash</span>
+                    </button>
+                    <button 
+                      onClick={() => {
+                        triggerHaptic();
+                        const link = `https://t.me/${import.meta.env.VITE_BOT_USERNAME || 'ranglitugmabot'}?start=${tgUser?.id}`;
+                        const text = encodeURIComponent("Zuhra Olimova • Har bir qiz o‘z multfilmini yarata oladi! Bot orqali ro'yxatdan o'ting va yopiq darslarga bepul kiring:");
+                        const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${text}`;
+                        const tg = window.Telegram?.WebApp;
+                        if (tg?.openTelegramLink) {
+                          tg.openTelegramLink(shareUrl);
+                        } else {
+                          window.open(shareUrl, '_blank');
+                        }
+                      }}
+                      className="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-rose-500 hover:bg-rose-400 text-white flex items-center justify-center gap-1.5 shadow-md shadow-rose-500/10 active:scale-95 transition"
+                    >
+                      <ExternalLink size={13} />
+                      <span>Do'stlarga ulashish</span>
                     </button>
                   </div>
                 </div>
@@ -692,12 +725,30 @@ export default function App() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Yopiq Kanal Havolasi (Invite Link)</label>
+                      <label className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Yopiq Kanal Havolasi (Invite Link Fallback)</label>
                       <input 
                         type="text" 
                         className="bg-rose-50/50 border border-rose-100 rounded-xl px-3 py-2 text-xs w-full text-slate-700 focus:outline-none focus:border-rose-400"
                         value={courseLinkInput}
                         onChange={(e) => setCourseLinkInput(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Yopiq Kanal Telegram ID (Private Channel ID)</label>
+                      <input 
+                        type="text" 
+                        className="bg-rose-50/50 border border-rose-100 rounded-xl px-3 py-2 text-xs w-full text-slate-700 focus:outline-none focus:border-rose-400"
+                        value={privateChannelIdInput}
+                        onChange={(e) => setPrivateChannelIdInput(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Har bir taklif uchun ball (Points per Referral)</label>
+                      <input 
+                        type="number" 
+                        className="bg-rose-50/50 border border-rose-100 rounded-xl px-3 py-2 text-xs w-full text-slate-700 focus:outline-none focus:border-rose-400"
+                        value={pointsPerReferralInput}
+                        onChange={(e) => setPointsPerReferralInput(e.target.value)}
                       />
                     </div>
                     <button
@@ -807,6 +858,35 @@ export default function App() {
                             <span className="text-slate-500">Taklif etilgan do'stlar:</span>
                             <span className="font-black text-rose-600">{Math.max(u.referral_count || 0, u.points || 0)} ta</span>
                           </div>
+
+                          {/* Inviter Info */}
+                          {u.referred_by && (
+                            <div className="flex justify-between items-center text-[9px] text-slate-400 pt-0.5">
+                              <span>Kim taklif qilgan:</span>
+                              <span className="font-semibold text-slate-500">
+                                {(() => {
+                                  const inviter = usersList.find(x => x.telegram_id === u.referred_by);
+                                  return inviter ? `${inviter.first_name} (@${inviter.username || 'yo\'q'})` : `ID: ${u.referred_by}`;
+                                })()}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Invitees Info */}
+                          {(() => {
+                            const referrals = usersList.filter(x => x.referred_by === u.telegram_id);
+                            if (referrals.length > 0) {
+                              return (
+                                <div className="text-[9px] text-slate-400 bg-rose-50/20 p-2 rounded-xl border border-rose-100/30 mt-1 space-y-1">
+                                  <p className="font-extrabold text-[8px] text-slate-500 uppercase tracking-wide">Taklif qilgan a'zolari ({referrals.length} ta):</p>
+                                  <p className="truncate font-medium text-slate-600">
+                                    {referrals.map(r => `${r.first_name} (${r.username ? '@' + r.username : 'ID: ' + r.telegram_id})`).join(', ')}
+                                  </p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
 
                           <div className="flex gap-2 pt-1 border-t border-rose-100/50">
                             <button

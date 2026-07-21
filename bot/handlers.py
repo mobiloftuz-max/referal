@@ -430,13 +430,24 @@ async def callback_course(callback: CallbackQuery, bot: Bot):
     
     threshold = int(await db.get_setting("referral_threshold", 5))
     
+    # Load private channel ID from DB settings, fallback to env var
+    db_chan_id = await db.get_setting("private_channel_id")
+    target_channel_id = None
+    if db_chan_id:
+        try:
+            target_channel_id = int(db_chan_id.strip())
+        except ValueError:
+            pass
+    if not target_channel_id:
+        target_channel_id = PRIVATE_CHANNEL_ID
+
     if effective_count >= threshold:
         # Generate single-use invite link
-        if PRIVATE_CHANNEL_ID:
+        if target_channel_id:
             try:
                 # Create chat invite link
                 link_obj = await bot.create_chat_invite_link(
-                    chat_id=PRIVATE_CHANNEL_ID,
+                    chat_id=target_channel_id,
                     member_limit=1,
                     name=f"Foydalanuvchi {user_id} uchun"
                 )
