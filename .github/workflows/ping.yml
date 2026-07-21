@@ -1,0 +1,15 @@
+name: Keep Bot Alive
+
+on:
+  schedule:
+    - cron: '*/10 * * * *' # Runs every 10 minutes
+  workflow_dispatch: # Allows manual run
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Bot Service
+        run: |
+          echo "Pinging Render bot health check endpoint..."
+          curl -f -s https://referal-2do9.onrender.com || echo "Ping failed, but service might be waking up"
