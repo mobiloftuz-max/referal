@@ -940,38 +940,50 @@ export default function App() {
       </main>
 
       {/* Footer Navigation Bar (Themed Pink & Spatially Aware) */}
-      <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/70 backdrop-blur-xl border-t border-rose-100 px-6 py-2.5 flex justify-between items-center shadow-2xl z-40 rounded-t-3xl">
+      <footer className="fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-white/75 backdrop-blur-xl border border-white/60 px-4 py-1.5 flex justify-around items-center shadow-lg shadow-pink-100/30 z-40 rounded-2xl">
         <button 
           onClick={() => { triggerHaptic(); setActiveTab('home'); }} 
-          className={`flex flex-col items-center gap-1 transition ${activeTab === 'home' ? 'text-rose-600' : 'text-slate-400 hover:text-rose-400'}`}
+          className="relative py-1 px-3.5 flex flex-col items-center gap-0.5 transition-all duration-300 active:scale-90"
         >
-          <User size={18} className={activeTab === 'home' ? 'scale-110 transition text-rose-500' : ''} />
-          <span className="text-[10px] font-bold">Profil</span>
+          <div className={`absolute inset-0 rounded-xl transition-all duration-300 -z-10 ${
+            activeTab === 'home' ? 'bg-rose-50 border border-rose-100/40 scale-100 opacity-100 shadow-sm shadow-rose-100/10' : 'scale-75 opacity-0'
+          }`} />
+          <User size={15} className={`transition-all duration-300 ${activeTab === 'home' ? 'text-rose-600 scale-110' : 'text-slate-400'}`} />
+          <span className={`text-[9px] transition-all duration-300 font-bold ${activeTab === 'home' ? 'text-rose-600' : 'text-slate-400'}`}>Profil</span>
         </button>
         
         <button 
           onClick={() => { triggerHaptic(); setActiveTab('course'); }} 
-          className={`flex flex-col items-center gap-1 transition ${activeTab === 'course' ? 'text-rose-600' : 'text-slate-400 hover:text-rose-400'}`}
+          className="relative py-1 px-3.5 flex flex-col items-center gap-0.5 transition-all duration-300 active:scale-90"
         >
-          <BookOpen size={18} className={activeTab === 'course' ? 'scale-110 transition text-rose-500' : ''} />
-          <span className="text-[10px] font-bold">Kurs</span>
+          <div className={`absolute inset-0 rounded-xl transition-all duration-300 -z-10 ${
+            activeTab === 'course' ? 'bg-rose-50 border border-rose-100/40 scale-100 opacity-100 shadow-sm shadow-rose-100/10' : 'scale-75 opacity-0'
+          }`} />
+          <BookOpen size={15} className={`transition-all duration-300 ${activeTab === 'course' ? 'text-rose-600 scale-110' : 'text-slate-400'}`} />
+          <span className={`text-[9px] transition-all duration-300 font-bold ${activeTab === 'course' ? 'text-rose-600' : 'text-slate-400'}`}>Kurs</span>
         </button>
 
         <button 
           onClick={() => { triggerHaptic(); setActiveTab('leaderboard'); }} 
-          className={`flex flex-col items-center gap-1 transition ${activeTab === 'leaderboard' ? 'text-rose-600' : 'text-slate-400 hover:text-rose-400'}`}
+          className="relative py-1 px-3.5 flex flex-col items-center gap-0.5 transition-all duration-300 active:scale-90"
         >
-          <Trophy size={18} className={activeTab === 'leaderboard' ? 'scale-110 transition text-rose-500' : ''} />
-          <span className="text-[10px] font-bold">Reyting</span>
+          <div className={`absolute inset-0 rounded-xl transition-all duration-300 -z-10 ${
+            activeTab === 'leaderboard' ? 'bg-rose-50 border border-rose-100/40 scale-100 opacity-100 shadow-sm shadow-rose-100/10' : 'scale-75 opacity-0'
+          }`} />
+          <Trophy size={15} className={`transition-all duration-300 ${activeTab === 'leaderboard' ? 'text-rose-600 scale-110' : 'text-slate-400'}`} />
+          <span className={`text-[9px] transition-all duration-300 font-bold ${activeTab === 'leaderboard' ? 'text-rose-600' : 'text-slate-400'}`}>Reyting</span>
         </button>
 
         {isAdmin() && (
           <button 
             onClick={() => { triggerHaptic(); setActiveTab('admin'); }} 
-            className={`flex flex-col items-center gap-1 transition ${activeTab === 'admin' ? 'text-rose-600' : 'text-slate-400 hover:text-rose-400'}`}
+            className="relative py-1 px-3.5 flex flex-col items-center gap-0.5 transition-all duration-300 active:scale-90"
           >
-            <Settings size={18} className={activeTab === 'admin' ? 'scale-110 transition text-rose-500' : ''} />
-            <span className="text-[10px] font-bold">Admin</span>
+            <div className={`absolute inset-0 rounded-xl transition-all duration-300 -z-10 ${
+              activeTab === 'admin' ? 'bg-rose-50 border border-rose-100/40 scale-100 opacity-100 shadow-sm shadow-rose-100/10' : 'scale-75 opacity-0'
+            }`} />
+            <Settings size={15} className={`transition-all duration-300 ${activeTab === 'admin' ? 'text-rose-600 scale-110' : 'text-slate-400'}`} />
+            <span className={`text-[9px] transition-all duration-300 font-bold ${activeTab === 'admin' ? 'text-rose-600' : 'text-slate-400'}`}>Admin</span>
           </button>
         )}
       </footer>
