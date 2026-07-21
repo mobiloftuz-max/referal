@@ -96,29 +96,31 @@ async def get_subscription_keyboard(bot: Bot, user_id: int):
     unsubscribed = await check_user_subscriptions(bot, user_id)
     unsubscribed_ids = {ch["tg_id"] for ch in unsubscribed}
     
-    # 1. Join buttons (🔴 if unsubscribed, 🟢 if subscribed)
+    # 1. Join buttons (style="danger" if unsubscribed, style="success" if subscribed)
     for idx, ch in enumerate(channels):
         title = ch.get("title", f"Kanal #{idx+1}")
         url = ch.get("invite_link", "")
         ch_tg_id = ch["tg_id"]
         
         if ch_tg_id in unsubscribed_ids:
-            status_text = f"🔴 {title}"
+            btn_style = "danger"
         else:
-            status_text = f"🟢 {title}"
+            btn_style = "success"
             
         buttons.append([
             InlineKeyboardButton(
-                text=status_text,
-                url=url
+                text=title,
+                url=url,
+                style=btn_style
             )
         ])
         
-    # 2. Verify subscription button (Blue / Check style)
+    # 2. Verify subscription button (Blue style)
     buttons.append([
         InlineKeyboardButton(
-            text="🔵 Obunani tekshirish",
+            text="Obunani tekshirish",
             callback_data="check_subs",
+            style="primary",
             icon_custom_emoji_id=EMOJI_CHECK
         )
     ])
@@ -131,20 +133,23 @@ async def get_main_menu_keyboard(user_id: int):
     keyboard = [
         [
             InlineKeyboardButton(
-                text="🔵 Do'stlarni taklif qilish",
+                text="Do'stlarni taklif qilish",
                 callback_data="menu_referral",
+                style="primary",
                 icon_custom_emoji_id=EMOJI_DOSTLARNI_TAKLIF_QILISH
             )
         ],
         [
             InlineKeyboardButton(
-                text="🔴 Reyting",
+                text="Reyting",
                 callback_data="menu_leaderboard",
+                style="danger",
                 icon_custom_emoji_id=EMOJI_REYTING
             ),
             InlineKeyboardButton(
-                text="🟢 Kursga kirish",
+                text="Kursga kirish",
                 callback_data="menu_course",
+                style="success",
                 icon_custom_emoji_id=EMOJI_KURSGA_KIRISH
             )
         ]
@@ -153,8 +158,9 @@ async def get_main_menu_keyboard(user_id: int):
     if is_admin:
         keyboard.append([
             InlineKeyboardButton(
-                text="🔵 Admin Panel",
+                text="Admin Panel",
                 callback_data="admin_menu",
+                style="primary",
                 icon_custom_emoji_id=EMOJI_STAR
             )
         ])
@@ -165,8 +171,9 @@ def get_back_keyboard(callback_target="main_menu"):
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="🔵 Ortga",
+                text="Ortga",
                 callback_data=callback_target,
+                style="primary",
                 icon_custom_emoji_id=EMOJI_ALERT
             )
         ]
@@ -508,15 +515,17 @@ async def callback_referral(callback: CallbackQuery, bot: Bot):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="🔵 Do'stlarni taklif qilish",
+                text="Do'stlarni taklif qilish",
                 url=share_url,
+                style="primary",
                 icon_custom_emoji_id=EMOJI_TAKLIF_HAVOLASI
             )
         ],
         [
             InlineKeyboardButton(
-                text="🔵 Ortga",
-                callback_data="main_menu"
+                text="Ortga",
+                callback_data="main_menu",
+                style="primary"
             )
         ]
     ])
@@ -601,15 +610,17 @@ async def callback_course(callback: CallbackQuery, bot: Bot):
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text="🟢 Kursga kirish",
+                        text="Kursga kirish",
                         url=fallback_link,
+                        style="success",
                         icon_custom_emoji_id=EMOJI_KURSGA_KIRISH
                     )
                 ],
                 [
                     InlineKeyboardButton(
-                        text="🔵 Ortga",
-                        callback_data="main_menu"
+                        text="Ortga",
+                        callback_data="main_menu",
+                        style="primary"
                     )
                 ]
             ])
@@ -637,15 +648,17 @@ async def callback_course(callback: CallbackQuery, bot: Bot):
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🔵 Do'stlarni taklif qilish",
+                    text="Do'stlarni taklif qilish",
                     url=share_url,
+                    style="primary",
                     icon_custom_emoji_id=EMOJI_TAKLIF_HAVOLASI
                 )
             ],
             [
                 InlineKeyboardButton(
-                    text="🔵 Ortga",
-                    callback_data="main_menu"
+                    text="Ortga",
+                    callback_data="main_menu",
+                    style="primary"
                 )
             ]
         ])
