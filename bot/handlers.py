@@ -267,23 +267,76 @@ async def handle_join_request(request: ChatJoinRequest, bot: Bot):
         except Exception as e:
             logger.error(f"Error declining join request: {e}")
     else:
-        try:
-            await bot.approve_chat_join_request(chat_id=chat_id, user_id=user_id)
-            logger.info(f"Approved join request from verified user {user_id} for channel {chat_id}")
-            
+        # Load private channel ID from settings
+        db_chan_id = await db.get_setting("private_channel_id")
+        target_channel_id = None
+        if db_chan_id:
+            try:
+                target_channel_id = int(db_chan_id.strip())
+            except ValueError:
+                pass
+        
+        # Check if this join request is for the private course channel
+        if target_channel_id and chat_id == target_channel_id:
             user = await db.get_user(user_id)
-            if not user:
-                await db.create_user(
-                    tg_id=user_id,
-                    username=username,
-                    first_name=request.from_user.first_name,
-                    avatar_exists=cd_info["avatar_exists"],
-                    username_entropy=cd_info["username_entropy"],
-                    cheat_score=cd_info["cheat_score"],
-                    is_verified=False
-                )
-        except Exception as e:
-            logger.error(f"Error approving join request: {e}")
+            threshold = int(await db.get_setting("referral_threshold", 5))
+            
+            effective_count = 0
+            if user:
+                referral_count = user.get("referral_count") or 0
+                points = user.get("points", 0)
+                effective_count = max(referral_count, points)
+                
+            if user and not user["is_banned"] and effective_count >= threshold:
+                try:
+                    await bot.approve_chat_join_request(chat_id=chat_id, user_id=user_id)
+                    logger.info(f"Approved private course channel join request for user {user_id} ({effective_count}/{threshold} referrals)")
+                    await bot.send_message(
+                        chat_id=user_id,
+                        text=(
+                            f"🎉 <b>Arizangiz tasdiqlandi!</b>\n\n"
+                            f"Siz yopiq kurs kanaliga muvaffaqiyatli qo'shildingiz. "
+                            f"Taklif qilgan do'stlaringiz soni: <b>{effective_count} ta</b>."
+                        ),
+                        parse_mode="HTML"
+                    )
+                except Exception as e:
+                    logger.error(f"Error approving course join request: {e}")
+            else:
+                try:
+                    await bot.decline_chat_join_request(chat_id=chat_id, user_id=user_id)
+                    logger.info(f"Declined private course channel join request for user {user_id} ({effective_count}/{threshold} referrals)")
+                    await bot.send_message(
+                        chat_id=user_id,
+                        text=(
+                            f"❌ <b>Arizangiz rad etildi!</b>\n\n"
+                            f"Yopiq kurs kanaliga kirish uchun sizda yetarli takliflar mavjud emas.\n"
+                            f"Sizda: <b>{effective_count} ta</b> (Talab etiladi: {threshold} ta).\n\n"
+                            f"Iltimos, do'stlaringizni taklif qiling va havolani bajargach qayta urinib ko'ring!"
+                        ),
+                        parse_mode="HTML"
+                    )
+                except Exception as e:
+                    logger.error(f"Error declining course join request: {e}")
+        else:
+            # Regular Force Subscribe sponsor channel auto-approval
+            try:
+                await bot.approve_chat_join_request(chat_id=chat_id, user_id=user_id)
+                logger.info(f"Approved join request from verified user {user_id} for channel {chat_id}")
+                
+                user = await db.get_user(user_id)
+                if not user:
+                    await db.create_user(
+                        tg_id=user_id,
+                        username=username,
+                        first_name=request.from_user.first_name,
+                        avatar_exists=cd_info["avatar_exists"],
+                        username_entropy=cd_info["username_entropy"],
+                        cheat_score=cd_info["cheat_score"],
+                        is_verified=False
+                    )
+            except Exception as e:
+                logger.error(f"Error approving join request: {e}")
 
 # --- Callback Queries ---
 
@@ -427,57 +480,24 @@ async def callback_course(callback: CallbackQuery, bot: Bot):
     referral_count = user.get("referral_count") or 0
     points = user.get("points", 0)
     effective_count = max(referral_count, points)
-    
     threshold = int(await db.get_setting("referral_threshold", 5))
     
-    # Load private channel ID from DB settings, fallback to env var
-    db_chan_id = await db.get_setting("private_channel_id")
-    target_channel_id = None
-    if db_chan_id:
-        try:
-            target_channel_id = int(db_chan_id.strip())
-        except ValueError:
-            pass
-    if not target_channel_id:
-        target_channel_id = PRIVATE_CHANNEL_ID
-
     if effective_count >= threshold:
-        # Generate single-use invite link
-        invite_link = None
-        if target_channel_id:
-            try:
-                # Create chat invite link
-                link_obj = await bot.create_chat_invite_link(
-                    chat_id=target_channel_id,
-                    member_limit=1,
-                    name=f"Foydalanuvchi {user_id} uchun"
-                )
-                invite_link = link_obj.invite_link
-            except Exception as e:
-                logger.error(f"Error creating invite link: {e}")
-
-        if invite_link:
+        # Load the direct invite link configured in settings
+        fallback_link = await db.get_setting("private_channel_link")
+        if fallback_link:
             text = (
                 f"🎉 <b>Tabriklaymiz! Siz yopiq kanalga kirish huquqini qo'lga kiritdingiz!</b>\n\n"
                 f"Taklif qilgan do'stlaringiz soni: <b>{effective_count} ta</b> (Talab etilgan: {threshold} ta)\n\n"
-                f"🔑 <b>Kursga kirish havolasi:</b>\n{invite_link}\n\n"
-                f"⚠️ <i>Eslatma: Ushbu havola faqat bitta foydalanuvchi uchun mo'ljallangan va bir marta ishlatilgandan so'ng faolsizlanadi!</i>"
+                f"🔑 <b>Kursga kirish havolasi:</b>\n{fallback_link}\n\n"
+                f"⚠️ <i>Eslatma: Havolaga kirib, 'Kanalga qo'shilishni so'rash' (Request to join) tugmasini bosing. Bot arizangizni avtomatik ravishda tasdiqlaydi!</i>"
             )
         else:
-            # Fallback to direct private channel link if configured
-            fallback_link = await db.get_setting("private_channel_link")
-            if fallback_link:
-                text = (
-                    f"🎉 <b>Tabriklaymiz! Siz yopiq kanalga kirish huquqini qo'lga kiritdingiz!</b>\n\n"
-                    f"Taklif qilgan do'stlaringiz soni: <b>{effective_count} ta</b> (Talab etilgan: {threshold} ta)\n\n"
-                    f"🔑 <b>Kursga kirish havolasi:</b>\n{fallback_link}"
-                )
-            else:
-                text = (
-                    f"🎉 <b>Tabriklaymiz! Siz yopiq kanalga kirish huquqini qo'lga kiritdingiz!</b>\n\n"
-                    f"Taklif qilgan do'stlaringiz soni: <b>{effective_count} ta</b> (Talab etilgan: {threshold} ta)\n\n"
-                    f"🔑 Bizning kursimiz yopiq kanalda joylashgan. Kanal havolasini olish uchun administrator bilan bog'laning."
-                )
+            text = (
+                f"🎉 <b>Tabriklaymiz! Siz yopiq kanalga kirish huquqini qo'lga kiritdingiz!</b>\n\n"
+                f"Taklif qilgan do'stlaringiz soni: <b>{effective_count} ta</b> (Talab etilgan: {threshold} ta)\n\n"
+                f"⚠️ Hozircha yopiq kanal havolasi sozlanmagan. Iltimos, administratorga xabar bering."
+            )
     else:
         text = (
             f"🔒 <b>Kurs yopiq kanalda joylashgan!</b>\n\n"
