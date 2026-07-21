@@ -443,6 +443,7 @@ async def callback_course(callback: CallbackQuery, bot: Bot):
 
     if effective_count >= threshold:
         # Generate single-use invite link
+        invite_link = None
         if target_channel_id:
             try:
                 # Create chat invite link
@@ -452,26 +453,31 @@ async def callback_course(callback: CallbackQuery, bot: Bot):
                     name=f"Foydalanuvchi {user_id} uchun"
                 )
                 invite_link = link_obj.invite_link
+            except Exception as e:
+                logger.error(f"Error creating invite link: {e}")
+
+        if invite_link:
+            text = (
+                f"🎉 <b>Tabriklaymiz! Siz yopiq kanalga kirish huquqini qo'lga kiritdingiz!</b>\n\n"
+                f"Taklif qilgan do'stlaringiz soni: <b>{effective_count} ta</b> (Talab etilgan: {threshold} ta)\n\n"
+                f"🔑 <b>Kursga kirish havolasi:</b>\n{invite_link}\n\n"
+                f"⚠️ <i>Eslatma: Ushbu havola faqat bitta foydalanuvchi uchun mo'ljallangan va bir marta ishlatilgandan so'ng faolsizlanadi!</i>"
+            )
+        else:
+            # Fallback to direct private channel link if configured
+            fallback_link = await db.get_setting("private_channel_link")
+            if fallback_link:
                 text = (
                     f"🎉 <b>Tabriklaymiz! Siz yopiq kanalga kirish huquqini qo'lga kiritdingiz!</b>\n\n"
                     f"Taklif qilgan do'stlaringiz soni: <b>{effective_count} ta</b> (Talab etilgan: {threshold} ta)\n\n"
-                    f"🔑 <b>Kursga kirish havolasi:</b>\n{invite_link}\n\n"
-                    f"⚠️ <i>Eslatma: Ushbu havola faqat bitta foydalanuvchi uchun mo'ljallangan va bir marta ishlatilgandan so'ng faolsizlanadi!</i>"
+                    f"🔑 <b>Kursga kirish havolasi:</b>\n{fallback_link}"
                 )
-            except Exception as e:
-                logger.error(f"Error creating invite link: {e}")
-                # Fallback to direct link or admin message if bot lacks admin permissions
+            else:
                 text = (
                     f"🎉 <b>Tabriklaymiz! Siz yopiq kanalga kirish huquqini qo'lga kiritdingiz!</b>\n\n"
                     f"Taklif qilgan do'stlaringiz soni: <b>{effective_count} ta</b> (Talab etilgan: {threshold} ta)\n\n"
                     f"🔑 Bizning kursimiz yopiq kanalda joylashgan. Kanal havolasini olish uchun administrator bilan bog'laning."
                 )
-        else:
-            text = (
-                f"🎉 <b>Tabriklaymiz! Siz yopiq kanalga kirish huquqini qo'lga kiritdingiz!</b>\n\n"
-                f"Taklif qilgan do'stlaringiz soni: <b>{effective_count} ta</b> (Talab etilgan: {threshold} ta)\n\n"
-                f"⚠️ Hozircha yopiq kanal ID-si sozlanmagan. Iltimos, administratorga xabar bering."
-            )
     else:
         text = (
             f"🔒 <b>Kurs yopiq kanalda joylashgan!</b>\n\n"
@@ -764,3 +770,18 @@ async def callback_reset_confirm(callback: CallbackQuery):
     await db.reset_contest()
     await callback.answer("Konkurs ballari va so'rovlari muvaffaqiyatli nollashtirildi! 💥", show_alert=True)
     await callback_admin_menu(callback)
+
+# --- Helper: Get Channel ID by forwarding a message ---
+@router.message(F.forward_from_chat)
+async def handle_forwarded_channel_msg(message: Message):
+    if message.from_user.id not in ADMIN_IDS:
+        return
+    chat = message.forward_from_chat
+    if chat.type == "channel":
+        await message.answer(
+            f"🔑 <b>Kanalingiz haqida ma'lumotlar:</b>\n\n"
+            f"📌 <b>Kanal nomi:</b> {chat.title or 'Noma\'lum kanal'}\n"
+            f"🆔 <b>Kanal ID raqami:</b> <code>{chat.id}</code>\n\n"
+            f"Ushbu 🆔 raqamni nusxalab, admin paneldagi <b>\"Yopiq kanal ID-si\"</b> maydoniga kiriting.",
+            parse_mode="HTML"
+        )
