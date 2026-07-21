@@ -380,7 +380,7 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-tr from-pink-50 via-rose-50/20 to-indigo-50 text-slate-800 flex flex-col font-sans select-none pb-20 animate-fade-in-up">
+    <div className="h-screen max-h-screen overflow-hidden bg-gradient-to-tr from-pink-50 via-rose-50/20 to-indigo-50 text-slate-800 flex flex-col font-sans select-none pb-0 animate-fade-in-up">
       
       {/* SVG Displacement Map for Gooey Droplet filter */}
       {perfClass !== 'low' && (
@@ -432,8 +432,14 @@ export default function App() {
         </div>
       )}
 
+      {/* Zuhra Olimova Top Title */}
+      <div className="px-5 pt-4 pb-1 bg-white/40 backdrop-blur-md flex justify-between items-center border-b border-rose-100/10">
+        <span className="text-[10px] font-black tracking-widest bg-gradient-to-r from-pink-500 to-rose-600 bg-clip-text text-transparent uppercase">Zuhra Olimova</span>
+        <span className="text-[8px] bg-rose-50 text-rose-500 border border-rose-100 font-extrabold px-2 py-0.5 rounded-full">Yopiq Kurs</span>
+      </div>
+
       {/* Header Profile Section */}
-      <header className="px-5 pt-6 pb-4 bg-white/40 backdrop-blur-md border-b border-white/30 flex justify-between items-center">
+      <header className="px-5 pt-4 pb-4 bg-white/40 backdrop-blur-md border-b border-white/30 flex justify-between items-center">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-400 to-rose-400 flex items-center justify-center font-bold text-white shadow-lg shadow-pink-400/20">
             {tgUser?.first_name?.charAt(0).toUpperCase() || 'U'}
@@ -458,7 +464,7 @@ export default function App() {
       </header>
 
       {/* Main Tab Views */}
-      <main className="flex-1 px-4 py-5 overflow-y-auto max-w-md mx-auto w-full">
+      <main className="flex-1 px-4 py-5 overflow-y-auto pb-28 max-w-md mx-auto w-full">
         
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
@@ -473,8 +479,8 @@ export default function App() {
                 
                 {/* Status Notice if Unverified */}
                 {!userData?.is_verified && !userData?.is_banned && (
-                  <div className="bg-white/70 border border-blue-200 p-4 rounded-3xl flex gap-3 text-xs text-blue-700 shadow-md shadow-blue-100/10">
-                    <ShieldAlert className="text-blue-500 shrink-0" size={18} />
+                  <div className="bg-white/70 border border-pink-200 p-4 rounded-3xl flex gap-3 text-xs text-pink-700 shadow-md shadow-pink-100/10">
+                    <ShieldAlert className="text-pink-500 shrink-0" size={18} />
                     <p className="leading-relaxed">
                       Kursga kirish uchun quyidagi homiy kanallarga obuna bo'lishingiz va a'zolikni tasdiqlashingiz zarur.
                     </p>
@@ -482,13 +488,13 @@ export default function App() {
                 )}
 
                 {/* Dashboard Card (Liquid Glass style) */}
-                <div className="bg-white/75 backdrop-blur-xl border border-white/50 p-6 rounded-[32px] relative overflow-hidden shadow-xl shadow-blue-100/25">
-                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-300/10 rounded-full blur-2xl" />
+                <div className="bg-white/75 backdrop-blur-xl border border-white/50 p-6 rounded-[32px] relative overflow-hidden shadow-xl shadow-pink-100/25">
+                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-pink-300/10 rounded-full blur-2xl" />
                   <div className="absolute -bottom-10 -left-10 w-28 h-28 bg-indigo-300/10 rounded-full blur-2xl" />
                   
                   <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Siz taklif qilgan do'stlar</p>
                   <div className="flex items-baseline gap-2 mt-1">
-                    <span className="text-4xl font-black text-blue-600">{userReferrals}</span>
+                    <span className="text-4xl font-black text-rose-600">{userReferrals}</span>
                     <span className="text-slate-400 text-xs font-semibold">ta a'zo</span>
                   </div>
 
@@ -496,24 +502,24 @@ export default function App() {
                   <div className="mt-5 space-y-2">
                     <div className="flex justify-between text-[10px] font-bold">
                       <span className="text-slate-500">Kursni ochish holati</span>
-                      <span className="text-blue-600">{userReferrals} / {threshold} do'st</span>
+                      <span className="text-rose-600">{userReferrals} / {threshold} do'st</span>
                     </div>
-                    <div className="w-full h-3 bg-blue-100/60 rounded-full overflow-hidden p-0.5 border border-blue-100">
+                    <div className="w-full h-3 bg-pink-100/60 rounded-full overflow-hidden p-0.5 border border-pink-100">
                       <div 
-                        className="h-full bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full transition-all duration-500 shadow-inner"
+                        className="h-full bg-gradient-to-r from-pink-400 to-rose-500 rounded-full transition-all duration-500 shadow-inner"
                         style={{ width: `${progressPercent}%` }}
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 mt-6 pt-5 border-t border-blue-100">
+                  <div className="grid grid-cols-2 gap-4 mt-6 pt-5 border-t border-rose-100">
                     <div>
                       <p className="text-slate-400 text-[9px] uppercase font-bold tracking-wider">Sizning Status</p>
                       <p className="text-xs font-extrabold text-slate-700 mt-1 flex items-center gap-1">
                         {isUnlocked ? (
                           <>
-                            <Unlock size={12} className="text-emerald-500" />
-                            <span className="text-emerald-600">Kurs Ochiq</span>
+                            <Unlock size={12} className="text-rose-500" />
+                            <span className="text-rose-600">Kurs Ochiq</span>
                           </>
                         ) : (
                           <>
@@ -533,19 +539,19 @@ export default function App() {
                 </div>
 
                 {/* Referral Link Box */}
-                <div className="bg-white/70 border border-white/40 p-5 rounded-[32px] space-y-4 shadow-lg shadow-blue-100/20">
+                <div className="bg-white/70 border border-white/40 p-5 rounded-[32px] space-y-4 shadow-lg shadow-pink-100/20">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <Users className="text-blue-500" size={16} />
+                      <Users className="text-rose-500" size={16} />
                       <span className="text-xs font-extrabold text-slate-700">Taklif Havolasi</span>
                     </div>
-                    <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[8px] font-extrabold">Havolangiz</span>
+                    <span className="bg-rose-50 text-rose-600 px-2 py-0.5 rounded text-[8px] font-extrabold">Havolangiz</span>
                   </div>
                   <p className="text-slate-400 text-[10px] leading-relaxed">
                     Havolani nusxalang va do'stlaringizga ulashing. Har bir faol a'zo uchun sizga taklif qo'shiladi va yopiq kurs ochiladi!
                   </p>
                   
-                  <div className="bg-blue-50/50 border border-blue-100 py-2.5 px-3 rounded-2xl text-center select-all font-mono font-bold text-[10px] text-slate-600 truncate">
+                  <div className="bg-rose-50/50 border border-rose-100 py-2.5 px-3 rounded-2xl text-center select-all font-mono font-bold text-[10px] text-slate-600 truncate">
                     https://t.me/{import.meta.env.VITE_BOT_USERNAME || 'ranglitugmabot'}?start={tgUser?.id}
                   </div>
 
@@ -557,7 +563,7 @@ export default function App() {
                         triggerHaptic('success');
                         showFeedback('Nusxalandi! 📋', 'success');
                       }}
-                      className="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-white border border-blue-100 hover:bg-blue-50 text-blue-600 flex items-center justify-center gap-1.5 active:scale-95 transition"
+                      className="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-white border border-rose-100 hover:bg-rose-50 text-rose-600 flex items-center justify-center gap-1.5 active:scale-95 transition"
                     >
                       <Copy size={13} />
                       <span>Nusxalash</span>
@@ -576,7 +582,7 @@ export default function App() {
                           window.open(shareUrl, '_blank');
                         }
                       }}
-                      className="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-1.5 shadow-md shadow-blue-500/10 active:scale-95 transition"
+                      className="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-rose-500 hover:bg-rose-400 text-white flex items-center justify-center gap-1.5 shadow-md shadow-rose-500/10 active:scale-95 transition"
                     >
                       <ExternalLink size={13} />
                       <span>Do'stlarga ulashish</span>
@@ -593,7 +599,7 @@ export default function App() {
                 {/* Visual lock status */}
                 <div className={`w-20 h-20 rounded-full flex items-center justify-center border shadow-lg ${
                   isUnlocked 
-                    ? 'bg-emerald-500/10 border-emerald-500/20 shadow-emerald-500/5 text-emerald-600' 
+                    ? 'bg-rose-500/10 border-rose-500/20 shadow-rose-500/5 text-rose-600' 
                     : 'bg-slate-100 border-slate-200 shadow-slate-100/5 text-slate-400'
                 }`}>
                   {isUnlocked ? <Unlock size={38} className="animate-bounce" /> : <Lock size={38} />}
@@ -607,9 +613,9 @@ export default function App() {
                 </div>
 
                 {/* Progress Details card */}
-                <div className="bg-white/70 border border-white/40 p-5 rounded-[32px] w-full text-center shadow-lg shadow-emerald-100/20">
+                <div className="bg-white/70 border border-white/40 p-5 rounded-[32px] w-full text-center shadow-lg shadow-pink-100/20">
                   <p className="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Hozirgi takliflaringiz</p>
-                  <p className="text-3xl font-black text-emerald-600 mt-1">{userReferrals} / {threshold}</p>
+                  <p className="text-3xl font-black text-rose-600 mt-1">{userReferrals} / {threshold}</p>
                   <p className="text-[9px] text-slate-400 mt-2">
                     {isUnlocked 
                       ? "Tabriklaymiz! Sizda yetarli a'zolar bor. Quyidagi tugma orqali kursga kirishingiz mumkin." 
@@ -624,7 +630,7 @@ export default function App() {
                     target="_blank"
                     rel="noreferrer"
                     onClick={() => triggerHaptic('success')}
-                    className="w-full py-4 px-6 rounded-2xl font-bold text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/35 text-center flex items-center justify-center gap-2 transform active:scale-95 transition"
+                    className="w-full py-4 px-6 rounded-2xl font-bold text-xs bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-400 hover:to-pink-400 text-white shadow-lg shadow-rose-500/20 hover:shadow-rose-500/35 text-center flex items-center justify-center gap-2 transform active:scale-95 transition"
                   >
                     <span>🔑 Kursga Kirish</span>
                     <ExternalLink size={14} />
@@ -645,15 +651,15 @@ export default function App() {
             {activeTab === 'leaderboard' && (
               <div className="space-y-4 animate-scale-in">
                 <div className="flex items-center gap-2 pb-1">
-                  <Trophy className="text-red-500" size={18} />
+                  <Trophy className="text-rose-500" size={18} />
                   <h2 className="text-sm font-extrabold text-slate-800">Eng ko'p do'st taklif qilganlar</h2>
                 </div>
 
-                <div className="bg-white/70 border border-white/40 rounded-[32px] overflow-hidden shadow-xl shadow-red-100/20">
+                <div className="bg-white/70 border border-white/40 rounded-[32px] overflow-hidden shadow-xl shadow-pink-100/20">
                   {leaderboard.length === 0 ? (
                     <p className="p-6 text-center text-xs text-slate-400 font-medium">Hozircha reyting jadvali bo'sh.</p>
                   ) : (
-                    <div className="divide-y divide-red-50/50">
+                    <div className="divide-y divide-rose-50/50">
                       {leaderboard.map((item, index) => {
                         const isTop3 = index < 3;
                         const rankColors = [
@@ -663,7 +669,7 @@ export default function App() {
                         ];
                         
                         return (
-                          <div key={index} className="px-5 py-4 flex items-center justify-between hover:bg-red-50/10 transition">
+                          <div key={index} className="px-5 py-4 flex items-center justify-between hover:bg-rose-50/10 transition">
                             <div className="flex items-center gap-4">
                               <span className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] border ${
                                 isTop3 ? rankColors[index] : 'bg-slate-100 text-slate-400 border-slate-200'
@@ -673,13 +679,13 @@ export default function App() {
                               <div>
                                 <h4 className="font-extrabold text-xs text-slate-700">{item.first_name}</h4>
                                 {item.username && (
-                                  <p className="text-[9px] text-red-400 font-semibold mt-0.5">@{item.username}</p>
+                                  <p className="text-[9px] text-rose-400 font-semibold mt-0.5">@{item.username}</p>
                                 )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-1 bg-red-50 px-2.5 py-1 rounded-full border border-red-100">
-                              <span className="font-extrabold text-xs text-red-600">{item.referral_count || item.points || 0}</span>
-                              <span className="text-[9px] text-red-400 font-medium">taklif</span>
+                            <div className="flex items-center gap-1 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100">
+                              <span className="font-extrabold text-xs text-rose-600">{item.referral_count || item.points || 0}</span>
+                              <span className="text-[9px] text-rose-400 font-medium">taklif</span>
                             </div>
                           </div>
                         );
@@ -710,7 +716,7 @@ export default function App() {
                   </div>
                   <div className="bg-white/70 border border-white/40 p-4 rounded-2xl text-center shadow-md">
                     <p className="text-[8px] text-slate-400 uppercase font-bold tracking-wider">Kursni ochganlar</p>
-                    <p className="text-2xl font-black mt-1 text-indigo-500">{stats?.course_unlocked_users || 0}</p>
+                    <p className="text-2xl font-black mt-1 text-pink-500">{stats?.course_unlocked_users || 0}</p>
                   </div>
                 </div>
 
@@ -934,37 +940,37 @@ export default function App() {
       </main>
 
       {/* Footer Navigation Bar (Themed Pink & Spatially Aware) */}
-      <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/70 backdrop-blur-xl border-t border-slate-100 px-6 py-2.5 flex justify-between items-center shadow-2xl z-40 rounded-t-3xl">
+      <footer className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/70 backdrop-blur-xl border-t border-rose-100 px-6 py-2.5 flex justify-between items-center shadow-2xl z-40 rounded-t-3xl">
         <button 
           onClick={() => { triggerHaptic(); setActiveTab('home'); }} 
-          className={`flex flex-col items-center gap-1 transition ${activeTab === 'home' ? 'text-blue-600' : 'text-slate-400 hover:text-blue-400'}`}
+          className={`flex flex-col items-center gap-1 transition ${activeTab === 'home' ? 'text-rose-600' : 'text-slate-400 hover:text-rose-400'}`}
         >
-          <User size={18} className={activeTab === 'home' ? 'scale-110 transition text-blue-500' : ''} />
+          <User size={18} className={activeTab === 'home' ? 'scale-110 transition text-rose-500' : ''} />
           <span className="text-[10px] font-bold">Profil</span>
         </button>
         
         <button 
           onClick={() => { triggerHaptic(); setActiveTab('course'); }} 
-          className={`flex flex-col items-center gap-1 transition ${activeTab === 'course' ? 'text-emerald-600' : 'text-slate-400 hover:text-emerald-400'}`}
+          className={`flex flex-col items-center gap-1 transition ${activeTab === 'course' ? 'text-rose-600' : 'text-slate-400 hover:text-rose-400'}`}
         >
-          <BookOpen size={18} className={activeTab === 'course' ? 'scale-110 transition text-emerald-500' : ''} />
+          <BookOpen size={18} className={activeTab === 'course' ? 'scale-110 transition text-rose-500' : ''} />
           <span className="text-[10px] font-bold">Kurs</span>
         </button>
 
         <button 
           onClick={() => { triggerHaptic(); setActiveTab('leaderboard'); }} 
-          className={`flex flex-col items-center gap-1 transition ${activeTab === 'leaderboard' ? 'text-red-600' : 'text-slate-400 hover:text-red-400'}`}
+          className={`flex flex-col items-center gap-1 transition ${activeTab === 'leaderboard' ? 'text-rose-600' : 'text-slate-400 hover:text-rose-400'}`}
         >
-          <Trophy size={18} className={activeTab === 'leaderboard' ? 'scale-110 transition text-red-500' : ''} />
+          <Trophy size={18} className={activeTab === 'leaderboard' ? 'scale-110 transition text-rose-500' : ''} />
           <span className="text-[10px] font-bold">Reyting</span>
         </button>
 
         {isAdmin() && (
           <button 
             onClick={() => { triggerHaptic(); setActiveTab('admin'); }} 
-            className={`flex flex-col items-center gap-1 transition ${activeTab === 'admin' ? 'text-blue-600' : 'text-slate-400 hover:text-blue-400'}`}
+            className={`flex flex-col items-center gap-1 transition ${activeTab === 'admin' ? 'text-rose-600' : 'text-slate-400 hover:text-rose-400'}`}
           >
-            <Settings size={18} className={activeTab === 'admin' ? 'scale-110 transition text-blue-500' : ''} />
+            <Settings size={18} className={activeTab === 'admin' ? 'scale-110 transition text-rose-500' : ''} />
             <span className="text-[10px] font-bold">Admin</span>
           </button>
         )}
