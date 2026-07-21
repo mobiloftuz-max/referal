@@ -55,7 +55,10 @@ async def main():
     dp.include_router(router)
     
     # Delete webhook if exists to use long polling
-    await bot.delete_webhook(drop_pending_updates=True)
+    try:
+        await bot.delete_webhook(drop_pending_updates=True)
+    except Exception as e:
+        logger.warning(f"Could not delete webhook on startup: {e}")
     
     # Start the dummy port listener for Render
     threading.Thread(target=start_dummy_server, daemon=True).start()
