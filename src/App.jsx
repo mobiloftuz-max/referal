@@ -6,6 +6,24 @@ import {
 } from 'lucide-react';
 import { supabase } from './supabase_client';
 
+const maskText = (text) => {
+  if (!text) return "";
+  text = text.trim();
+  if (!text) return "";
+  return text.split(' ').map(part => {
+    const len = part.length;
+    if (len <= 2) {
+      return len > 0 ? part[0] + "*" : "";
+    } else if (len === 3) {
+      return part[0] + "*" + part[2];
+    } else if (len === 4) {
+      return part[0] + "**" + part[3];
+    } else {
+      return part.slice(0, 2) + "***" + part[part.length - 1];
+    }
+  }).join(' ');
+};
+
 export default function App() {
   // Telegram WebApp API Integration
   const [tgUser, setTgUser] = useState(null);
@@ -677,9 +695,9 @@ export default function App() {
                                 {index + 1}
                               </span>
                               <div>
-                                <h4 className="font-extrabold text-xs text-slate-700">{item.first_name}</h4>
+                                <h4 className="font-extrabold text-xs text-slate-700">{maskText(item.first_name)}</h4>
                                 {item.username && (
-                                  <p className="text-[9px] text-rose-400 font-semibold mt-0.5">@{item.username}</p>
+                                  <p className="text-[9px] text-rose-400 font-semibold mt-0.5">@{maskText(item.username)}</p>
                                 )}
                               </div>
                             </div>

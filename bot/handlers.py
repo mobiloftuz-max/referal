@@ -536,6 +536,26 @@ async def callback_referral(callback: CallbackQuery, bot: Bot):
         reply_markup=keyboard
     )
 
+def mask_text(text: str) -> str:
+    if not text:
+        return ""
+    text = text.strip()
+    if not text:
+        return ""
+    parts = text.split()
+    masked_parts = []
+    for part in parts:
+        length = len(part)
+        if length <= 2:
+            masked_parts.append(part[0] + "*" if length > 0 else "")
+        elif length == 3:
+            masked_parts.append(part[0] + "*" + part[2])
+        elif length == 4:
+            masked_parts.append(part[0] + "**" + part[3])
+        else:
+            masked_parts.append(part[:2] + "***" + part[-1])
+    return " ".join(masked_parts)
+
 @router.callback_query(F.data == "menu_leaderboard")
 async def callback_leaderboard(callback: CallbackQuery, bot: Bot):
     # --- Rate Limit Check ---
@@ -561,10 +581,13 @@ async def callback_leaderboard(callback: CallbackQuery, bot: Bot):
         for idx, row in enumerate(leaderboard):
             medal = medals[idx] if idx < len(medals) else f"•"
             name = row.get("first_name", "Ishtirokchi")
-            name = name.replace("<", "&lt;").replace(">", "&gt;")
-            username_str = f" (@{row['username']})" if row.get("username") else ""
+            masked_name = mask_text(name)
+            masked_name = masked_name.replace("<", "&lt;").replace(">", "&gt;")
+            
+            raw_username = row.get("username")
+            username_str = f" (@{mask_text(raw_username)})" if raw_username else ""
             points = row.get("points", 0)
-            text += f"{medal} <b>{name}</b>{username_str} — <b>{points}</b> ta taklif\n"
+            text += f"{medal} <b>{masked_name}</b>{username_str} — <b>{points}</b> ta taklif\n"
             
     text += f"\n\n👥 <i>Siz ham do'stlaringizni taklif qilib, reyting tepasiga ko'tariling!</i>"
             
