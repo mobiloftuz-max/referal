@@ -16,6 +16,7 @@ from aiogram.fsm.state import State, StatesGroup
 
 import database as db
 import cheat_detector as cd
+from rate_limiter import rate_limiter
 
 # Load environment variables
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
@@ -26,6 +27,12 @@ logger = logging.getLogger(__name__)
 ADMIN_IDS = [int(x.strip()) for x in os.environ.get("ADMIN_IDS", "").split(",") if x.strip()]
 PRIVATE_CHANNEL_ID = int(os.environ.get("PRIVATE_CHANNEL_ID", "0"))
 BOT_USERNAME = os.environ.get("BOT_USERNAME", "")
+
+# Custom Premium Emoji IDs (User provided)
+EMOJI_REYTING = "5226431245918942763"
+EMOJI_KURSGA_KIRISH = "5278573677900752088"
+EMOJI_DOSTLARNI_TAKLIF_QILISH = "5332724926216428039"
+EMOJI_TAKLIF_HAVOLASI = "5118489535130371328"
 
 # Custom Premium Emoji IDs (Fallbacks)
 EMOJI_STAR = "5438341604928232974"       # Star icon
@@ -71,7 +78,12 @@ async def enforce_subscription(callback: CallbackQuery, bot: Bot) -> bool:
         await db.update_user(user_id, is_verified=False)
         kb = await get_subscription_keyboard(bot, user_id)
         await callback.message.edit_text(
-            text="Botdan foydalanish uchun quyidagi homiy kanallarga obuna bo'ling:",
+            text=(
+                "⚠️ <b>Botdan foydalanish uchun homiy kanallarga obuna bo'lishingiz lozim:</b>\n\n"
+                "Siz a'zo bo'lmagan kanallar 🔴 rangda, a'zo bo'lganlaringiz esa 🟢 rangda ko'rsatilgan. "
+                "Barcha kanallarga a'zo bo'lib, keyin <b>Obunani tekshirish</b> tugmasini bosing. 👇"
+            ),
+            parse_mode="HTML",
             reply_markup=kb
         )
         return True
@@ -81,25 +93,32 @@ async def get_subscription_keyboard(bot: Bot, user_id: int):
     channels = await db.get_active_channels()
     buttons = []
     
-    # 1. Join buttons (Blue / Primary style for sponsorship actions)
+    unsubscribed = await check_user_subscriptions(bot, user_id)
+    unsubscribed_ids = {ch["tg_id"] for ch in unsubscribed}
+    
+    # 1. Join buttons (🔴 if unsubscribed, 🟢 if subscribed)
     for idx, ch in enumerate(channels):
         title = ch.get("title", f"Kanal #{idx+1}")
         url = ch.get("invite_link", "")
+        ch_tg_id = ch["tg_id"]
+        
+        if ch_tg_id in unsubscribed_ids:
+            status_text = f"🔴 {title}"
+        else:
+            status_text = f"🟢 {title}"
+            
         buttons.append([
             InlineKeyboardButton(
-                text=f"➕ {title}",
-                url=url,
-                style="primary",
-                icon_custom_emoji_id=EMOJI_STAR
+                text=status_text,
+                url=url
             )
         ])
         
-    # 2. Verify subscription button (Green / Success style)
+    # 2. Verify subscription button (Blue / Check style)
     buttons.append([
         InlineKeyboardButton(
-            text="✅ Obunani tekshirish",
+            text="🔵 Obunani tekshirish",
             callback_data="check_subs",
-            style="success",
             icon_custom_emoji_id=EMOJI_CHECK
         )
     ])
@@ -112,22 +131,21 @@ async def get_main_menu_keyboard(user_id: int):
     keyboard = [
         [
             InlineKeyboardButton(
-                text="🔗 Taklif Havolasi",
+                text="🔵 Do'stlarni taklif qilish",
                 callback_data="menu_referral",
-                style="primary",
-                icon_custom_emoji_id=EMOJI_STAR
+                icon_custom_emoji_id=EMOJI_DOSTLARNI_TAKLIF_QILISH
             )
         ],
         [
             InlineKeyboardButton(
-                text="🏆 Reyting (Leaderboard)",
+                text="🔴 Reyting",
                 callback_data="menu_leaderboard",
-                icon_custom_emoji_id=EMOJI_LEADER
+                icon_custom_emoji_id=EMOJI_REYTING
             ),
             InlineKeyboardButton(
-                text="🔑 Kursga kirish",
+                text="🟢 Kursga kirish",
                 callback_data="menu_course",
-                icon_custom_emoji_id=EMOJI_STAR
+                icon_custom_emoji_id=EMOJI_KURSGA_KIRISH
             )
         ]
     ]
@@ -135,9 +153,9 @@ async def get_main_menu_keyboard(user_id: int):
     if is_admin:
         keyboard.append([
             InlineKeyboardButton(
-                text="🛠 Admin Panel",
+                text="🔵 Admin Panel",
                 callback_data="admin_menu",
-                style="primary"
+                icon_custom_emoji_id=EMOJI_STAR
             )
         ])
         
@@ -147,9 +165,8 @@ def get_back_keyboard(callback_target="main_menu"):
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="⬅️ Ortga",
+                text="🔵 Ortga",
                 callback_data=callback_target,
-                style="danger",
                 icon_custom_emoji_id=EMOJI_ALERT
             )
         ]
@@ -161,6 +178,16 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
     user_id = message.from_user.id
     username = message.from_user.username
     first_name = message.from_user.first_name
+    
+    # --- Rate Limit Check ---
+    rl = rate_limiter.check_rate_limit(user_id, action="start")
+    if not rl["allowed"]:
+        if rl["temp_banned"]:
+            await message.answer(rl["reason"])
+        else:
+            # Silent ignore for normal cooldown (don't spam back)
+            logger.info(f"Rate limited /start from user {user_id} (retry in {rl['retry_after']:.1f}s)")
+        return
     
     referrer_id = None
     if command.args:
@@ -211,7 +238,13 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             
         kb = await get_subscription_keyboard(bot, user_id)
         await message.answer(
-            f"Assalomu alaykum, {first_name}! Botdan to'liq foydalanish uchun quyidagi homiy kanallarga obuna bo'ling:",
+            text=(
+                f"👋 <b>Assalomu alaykum, {first_name}!</b>\n\n"
+                f"⚠️ <b>Botdan to'liq foydalanish uchun homiy kanallarga obuna bo'lishingiz lozim:</b>\n\n"
+                f"Siz a'zo bo'lmagan kanallar 🔴 rangda, a'zo bo'lganlaringiz esa 🟢 rangda ko'rsatilgan. "
+                f"Barcha kanallarga a'zo bo'lib, keyin <b>Obunani tekshirish</b> tugmasini bosing. 👇"
+            ),
+            parse_mode="HTML",
             reply_markup=kb
         )
     else:
@@ -242,9 +275,13 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         ref_link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
         kb = await get_main_menu_keyboard(user_id)
         await message.answer(
-            f"Xush kelibsiz, {first_name}!\n\n"
-            f"🔗 <b>Sizning taklif havolangiz:</b>\n<code>{ref_link}</code>\n\n"
-            f"Ushbu havolani nusxalash uchun ustiga bosing va do'stlaringizga ulashing. Quyidagi menyulardan birini tanlang:",
+            text=(
+                f"👋 <b>Assalomu alaykum, {first_name}!</b>\n\n"
+                f"Bizning botga xush kelibsiz! Bu yerda do'stlaringizni taklif qilib, yopiq kursimizga mutlaqo <b>bepul</b> kirish huquqini qo'lga kiritishingiz mumkin. ✨\n\n"
+                f"🔗 <b>Sizning shaxsiy taklif havolangiz:</b>\n<code>{ref_link}</code>\n\n"
+                f"<i>💡 Havolani do'stlaringizga yuboring. Ular botga kirib, homiy kanallarga obuna bo'lishsa, sizga ball yoziladi.</i>\n\n"
+                f"👇 Quyidagi menyudan kerakli bo'limni tanlang:"
+            ),
             parse_mode="HTML",
             reply_markup=kb
         )
@@ -343,6 +380,16 @@ async def handle_join_request(request: ChatJoinRequest, bot: Bot):
 @router.callback_query(F.data == "check_subs")
 async def callback_check_subs(callback: CallbackQuery, bot: Bot):
     user_id = callback.from_user.id
+    
+    # --- Rate Limit Check ---
+    rl = rate_limiter.check_rate_limit(user_id, action="callback")
+    if not rl["allowed"]:
+        if rl["temp_banned"]:
+            await callback.answer(rl["reason"], show_alert=True)
+        else:
+            await callback.answer(rl["reason"], show_alert=False)
+        return
+    
     user = await db.get_user(user_id)
     
     if not user:
@@ -402,6 +449,17 @@ async def callback_check_subs(callback: CallbackQuery, bot: Bot):
 
 @router.callback_query(F.data == "main_menu")
 async def callback_main_menu(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    user_id = callback.from_user.id
+    
+    # --- Rate Limit Check ---
+    rl = rate_limiter.check_rate_limit(user_id, action="callback")
+    if not rl["allowed"]:
+        if rl["temp_banned"]:
+            await callback.answer(rl["reason"], show_alert=True)
+        else:
+            await callback.answer(rl["reason"], show_alert=False)
+        return
+    
     await state.clear()
     if await enforce_subscription(callback, bot):
         return
@@ -415,6 +473,12 @@ async def callback_main_menu(callback: CallbackQuery, state: FSMContext, bot: Bo
 
 @router.callback_query(F.data == "menu_referral")
 async def callback_referral(callback: CallbackQuery, bot: Bot):
+    # --- Rate Limit Check ---
+    rl = rate_limiter.check_rate_limit(callback.from_user.id, action="callback")
+    if not rl["allowed"]:
+        await callback.answer(rl["reason"], show_alert=rl["temp_banned"])
+        return
+    
     if await enforce_subscription(callback, bot):
         return
         
@@ -427,38 +491,73 @@ async def callback_referral(callback: CallbackQuery, bot: Bot):
     ref_link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
     ref_count = await db.get_referrer_count(user_id)
     
+    from urllib.parse import quote
+    sharing_text = await db.get_setting("sharing_text", "Zuhra Olimova • Har bir qiz o‘z multfilmini yarata oladi! Bot orqali ro'yxatdan o'ting va yopiq darslarga bepul kiring:")
+    share_url = f"https://t.me/share/url?url={quote(ref_link)}&text={quote(sharing_text)}"
+    
     text = (
-        f"🎯 <b>Sizning Taklif Ma'lumotlaringiz:</b>\n\n"
-        f"👥 Taklif etilgan faol do'stlaringiz: <b>{ref_count} ta</b>\n\n"
-        f"🔗 Taklif havolangiz:\n<code>{ref_link}</code>\n\n"
-        f"Havolani nusxalash uchun ustiga bosing. Do'stlaringizni taklif qiling va yopiq kursni oching!"
+        f"👥 <b>Do'stlarni Taklif Qilish Tizimi</b>\n\n"
+        f"Do'stlaringizni botimizga taklif qiling va yopiq darslarga bepul kirish imkoniyatini qo'lga kiriting!\n\n"
+        f"📊 <b>Sizning ko'rsatkichlaringiz:</b>\n"
+        f"└ Taklif etilgan faol do'stlaringiz: <b>{ref_count} ta</b>\n\n"
+        f"🔗 <b>Sizning taklif havolangiz:</b>\n"
+        f"<code>{ref_link}</code>\n\n"
+        f"<i>💡 Ustiga bossangiz havolani nusxalaydi. Do'stlaringizga yoki guruhlarga pastdagi ko'k tugma orqali osongina yuborishingiz mumkin.</i>"
     )
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text="🔵 Do'stlarni taklif qilish",
+                url=share_url,
+                icon_custom_emoji_id=EMOJI_TAKLIF_HAVOLASI
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text="🔵 Ortga",
+                callback_data="main_menu"
+            )
+        ]
+    ])
     
     await callback.message.edit_text(
         text=text,
         parse_mode="HTML",
-        reply_markup=get_back_keyboard()
+        reply_markup=keyboard
     )
 
 @router.callback_query(F.data == "menu_leaderboard")
 async def callback_leaderboard(callback: CallbackQuery, bot: Bot):
+    # --- Rate Limit Check ---
+    rl = rate_limiter.check_rate_limit(callback.from_user.id, action="callback")
+    if not rl["allowed"]:
+        await callback.answer(rl["reason"], show_alert=rl["temp_banned"])
+        return
+    
     if await enforce_subscription(callback, bot):
         return
         
     leaderboard = await db.get_leaderboard(10)
     
-    text = "🏆 <b>TOP 10 Ishtirokchilar (Ko'p do'st taklif qilganlar):</b>\n\n"
+    text = (
+        f"🏆 <b>Reyting Jadvali (TOP 10)</b>\n"
+        f"Eng ko'p do'st taklif qilgan faol ishtirokchilar ro'yxati:\n\n"
+    )
     medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
     
     if not leaderboard:
-        text += "Hozircha faol ishtirokchilar mavjud emas."
+        text += "<i>Hozircha faol ishtirokchilar mavjud emas. Birinchilardan bo'ling!</i>"
     else:
         for idx, row in enumerate(leaderboard):
             medal = medals[idx] if idx < len(medals) else f"•"
             name = row.get("first_name", "Ishtirokchi")
+            name = name.replace("<", "&lt;").replace(">", "&gt;")
             username_str = f" (@{row['username']})" if row.get("username") else ""
             points = row.get("points", 0)
-            text += f"{medal} <b>{name}</b>{username_str} — <b>{points} ta taklif</b>\n"
+            text += f"{medal} <b>{name}</b>{username_str} — <b>{points}</b> ta taklif\n"
+            
+    text += f"\n\n👥 <i>Siz ham do'stlaringizni taklif qilib, reyting tepasiga ko'tariling!</i>"
             
     await callback.message.edit_text(
         text=text,
@@ -468,6 +567,12 @@ async def callback_leaderboard(callback: CallbackQuery, bot: Bot):
 
 @router.callback_query(F.data == "menu_course")
 async def callback_course(callback: CallbackQuery, bot: Bot):
+    # --- Rate Limit Check ---
+    rl = rate_limiter.check_rate_limit(callback.from_user.id, action="callback")
+    if not rl["allowed"]:
+        await callback.answer(rl["reason"], show_alert=rl["temp_banned"])
+        return
+    
     if await enforce_subscription(callback, bot):
         return
         
@@ -482,35 +587,73 @@ async def callback_course(callback: CallbackQuery, bot: Bot):
     effective_count = max(referral_count, points)
     threshold = int(await db.get_setting("referral_threshold", 5))
     
+    ref_link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
+    
     if effective_count >= threshold:
         # Load the direct invite link configured in settings
         fallback_link = await db.get_setting("private_channel_link")
         if fallback_link:
             text = (
-                f"🎉 <b>Tabriklaymiz! Siz yopiq kanalga kirish huquqini qo'lga kiritdingiz!</b>\n\n"
-                f"Taklif qilgan do'stlaringiz soni: <b>{effective_count} ta</b> (Talab etilgan: {threshold} ta)\n\n"
-                f"🔑 <b>Kursga kirish havolasi:</b>\n{fallback_link}\n\n"
-                f"⚠️ <i>Eslatma: Havolaga kirib, 'Kanalga qo'shilishni so'rash' (Request to join) tugmasini bosing. Bot arizangizni avtomatik ravishda tasdiqlaydi!</i>"
+                f"🎉 <b>Tabriklaymiz! Kursga bepul kirish imkoniyatingiz ochildi!</b>\n\n"
+                f"Siz muvaffaqiyatli taklif qildingiz: <b>{effective_count} / {threshold}</b> ta do'st.\n\n"
+                f"👇 Kursni boshlash uchun pastdagi yashil tugmani bosing va kanalga a'zo bo'lish so'rovini yuboring (Request to join):"
             )
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text="🟢 Kursga kirish",
+                        url=fallback_link,
+                        icon_custom_emoji_id=EMOJI_KURSGA_KIRISH
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        text="🔵 Ortga",
+                        callback_data="main_menu"
+                    )
+                ]
+            ])
         else:
             text = (
                 f"🎉 <b>Tabriklaymiz! Siz yopiq kanalga kirish huquqini qo'lga kiritdingiz!</b>\n\n"
-                f"Taklif qilgan do'stlaringiz soni: <b>{effective_count} ta</b> (Talab etilgan: {threshold} ta)\n\n"
+                f"Siz taklif qildingiz: <b>{effective_count} / {threshold}</b> ta do'st.\n\n"
                 f"⚠️ Hozircha yopiq kanal havolasi sozlanmagan. Iltimos, administratorga xabar bering."
             )
+            keyboard = get_back_keyboard()
     else:
+        from urllib.parse import quote
+        sharing_text = await db.get_setting("sharing_text", "Zuhra Olimova • Har bir qiz o‘z multfilmini yarata oladi! Bot orqali ro'yxatdan o'ting va yopiq darslarga bepul kiring:")
+        share_url = f"https://t.me/share/url?url={quote(ref_link)}&text={quote(sharing_text)}"
+        
         text = (
             f"🔒 <b>Kurs yopiq kanalda joylashgan!</b>\n\n"
-            f"Unga kirish uchun kamida <b>{threshold} ta</b> faol do'stingizni taklif qilishingiz kerak.\n"
-            f"Siz taklif qilgan faol a'zolar: <b>{effective_count} / {threshold}</b>\n\n"
-            f"🔗 Taklif havolangiz:\n<code>https://t.me/{BOT_USERNAME}?start={user_id}</code>\n\n"
-            f"Do'stlaringizni taklif qiling va kursga bepul kirishga ega bo'ling!"
+            f"Kursga kirish uchun siz kamida <b>{threshold} ta</b> do'stingizni taklif qilishingiz zarur.\n\n"
+            f"📊 <b>Sizning ko'rsatkichlaringiz:</b>\n"
+            f"├ Taklif etilgan faol a'zolar: <b>{effective_count} ta</b>\n"
+            f"└ Kursni ochish uchun yana: <b>{threshold - effective_count} ta</b> taklif kerak\n\n"
+            f"🔗 <b>Sizning taklif havolangiz:</b>\n<code>{ref_link}</code>\n\n"
+            f"Do'stlaringizni taklif qiling va kursga bepul kirish huquqini qo'lga kiriting!"
         )
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🔵 Do'stlarni taklif qilish",
+                    url=share_url,
+                    icon_custom_emoji_id=EMOJI_TAKLIF_HAVOLASI
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🔵 Ortga",
+                    callback_data="main_menu"
+                )
+            ]
+        ])
         
     await callback.message.edit_text(
         text=text,
         parse_mode="HTML",
-        reply_markup=get_back_keyboard()
+        reply_markup=keyboard
     )
 
 
@@ -551,13 +694,18 @@ async def callback_admin_stats(callback: CallbackQuery):
         return
         
     stats = await db.get_statistics()
+    rl_stats = rate_limiter.get_stats()
     
     text = (
         f"📊 <b>BOTNING REAL-VAQT STATISTIKASI:</b>\n\n"
         f"👥 Ro'yxatdan o'tgan foydalanuvchilar: <b>{stats['total_users']} ta</b>\n"
         f"✅ Tasdiqlangan faol ishtirokchilar: <b>{stats['verified_users']} ta</b>\n"
         f"🚫 Cheat sababli bloklanganlar: <b>{stats['banned_users']} ta</b>\n"
-        f"🔑 Kursga kirish huquqini ochganlar: <b>{stats['course_unlocked_users']} ta</b>"
+        f"🔑 Kursga kirish huquqini ochganlar: <b>{stats['course_unlocked_users']} ta</b>\n\n"
+        f"🛡 <b>Anti-Spam Himoyasi:</b>\n"
+        f"👁 Kuzatilayotgan foydalanuvchilar: <b>{rl_stats['tracked_users']}</b>\n"
+        f"⚠️ Faol qoidabuzarliklar: <b>{rl_stats['active_violations']}</b>\n"
+        f"⛔ Vaqtincha bloklangan: <b>{rl_stats['temp_banned_users']} ta</b>"
     )
     
     await callback.message.edit_text(text=text, parse_mode="HTML", reply_markup=get_back_keyboard("admin_menu"))
