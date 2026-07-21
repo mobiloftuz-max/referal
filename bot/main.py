@@ -85,7 +85,8 @@ def fix_database_rls():
                 )
                 successful_host = f"{host}:{port}"
                 break
-            except Exception:
+            except Exception as conn_err:
+                logger.warning(f"Failed to connect to pooler {host}:{port}: {conn_err}")
                 continue
         if conn:
             break
