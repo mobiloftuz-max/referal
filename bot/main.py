@@ -46,6 +46,42 @@ def start_dummy_server():
     except Exception as e:
         logger.error(f"Failed to start health check server: {e}")
 
+def fix_database_rls():
+    import psycopg2
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    supabase_service_key = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    if not supabase_url or not supabase_service_key:
+        return
+    
+    project_ref = supabase_url.replace("https://", "").split(".")[0]
+    host = f"db.{project_ref}.supabase.co"
+    port = 5432
+    user = "postgres"
+    password = supabase_service_key
+    database = "postgres"
+    
+    try:
+        conn = psycopg2.connect(
+            host=host,
+            port=port,
+            user=user,
+            password=password,
+            database=database,
+            connect_timeout=10
+        )
+        cursor = conn.cursor()
+        # Drop and create policies to allow public writes to settings table
+        cursor.execute('DROP POLICY IF EXISTS "Allow public all settings" ON settings;')
+        cursor.execute('DROP POLICY IF EXISTS "Allow public insert settings" ON settings;')
+        cursor.execute('DROP POLICY IF EXISTS "Allow public update settings" ON settings;')
+        cursor.execute('DROP POLICY IF EXISTS "Allow public delete settings" ON settings;')
+        cursor.execute('CREATE POLICY "Allow public all settings" ON settings FOR ALL USING (true) WITH CHECK (true);')
+        conn.commit()
+        conn.close()
+        logger.info("✅ Database RLS policies for settings table fixed successfully!")
+    except Exception as e:
+        logger.error(f"❌ Failed to fix database RLS policies: {e}")
+
 async def main():
     # Initialize Bot and Dispatcher
     bot = Bot(token=BOT_TOKEN)
@@ -53,6 +89,9 @@ async def main():
     
     # Register router
     dp.include_router(router)
+    
+    # Fix database RLS policies on startup
+    await asyncio.to_thread(fix_database_rls)
     
     # Delete webhook if exists to use long polling
     try:
