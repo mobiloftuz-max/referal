@@ -44,6 +44,39 @@ class Form(StatesGroup):
     waiting_for_broadcast = State()
 
 # --- Keyboard Builders (App-Like Edit-in-Place UX) ---
+async def check_user_subscriptions(bot: Bot, user_id: int) -> list:
+    channels = await db.get_active_channels()
+    unsubscribed = []
+    
+    for ch in channels:
+        ch_tg_id = ch["tg_id"]
+        try:
+            member = await bot.get_chat_member(chat_id=ch_tg_id, user_id=user_id)
+            if member.status in ['left', 'kicked']:
+                unsubscribed.append(ch)
+        except Exception as e:
+            logger.warning(f"Could not check membership in {ch_tg_id} for user {user_id}: {e}")
+            unsubscribed.append(ch)
+            
+    return unsubscribed
+
+async def enforce_subscription(callback: CallbackQuery, bot: Bot) -> bool:
+    """
+    Checks subscription and edits the message if user is unsubscribed.
+    Returns True if unsubscribed (and handled), False if fully subscribed.
+    """
+    user_id = callback.from_user.id
+    unsubscribed = await check_user_subscriptions(bot, user_id)
+    if unsubscribed:
+        await db.update_user(user_id, is_verified=False)
+        kb = await get_subscription_keyboard(bot, user_id)
+        await callback.message.edit_text(
+            text="Botdan foydalanish uchun quyidagi homiy kanallarga obuna bo'ling:",
+            reply_markup=kb
+        )
+        return True
+    return False
+
 async def get_subscription_keyboard(bot: Bot, user_id: int):
     channels = await db.get_active_channels()
     buttons = []
@@ -83,12 +116,6 @@ async def get_main_menu_keyboard(user_id: int):
                 callback_data="menu_referral",
                 style="primary",
                 icon_custom_emoji_id=EMOJI_STAR
-            ),
-            InlineKeyboardButton(
-                text="🎁 Kunlik Bonus",
-                callback_data="menu_bonus",
-                style="success",
-                icon_custom_emoji_id=EMOJI_REWARD
             )
         ],
         [
@@ -169,20 +196,56 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             await message.answer("⚠️ Tizim xavfsizlik filtri tomonidan shubhali faollik aniqlandi. Ruxsat berilmadi.")
             return
 
-    # Check if they are verified. If not, show force subscription
-    if not user["is_verified"] and not user["is_banned"]:
+    # Check if they are banned
+    if user["is_banned"]:
+        await message.answer("⚠️ Siz ushbu botdan foydalanishdan chetlatilgansiz.")
+        return
+
+    # Check current subscription status
+    unsubscribed = await check_user_subscriptions(bot, user_id)
+    
+    if unsubscribed:
+        # If they were verified before but left the channels, reset their verification status
+        if user["is_verified"]:
+            await db.update_user(user_id, is_verified=False)
+            
         kb = await get_subscription_keyboard(bot, user_id)
         await message.answer(
             f"Assalomu alaykum, {first_name}! Botdan to'liq foydalanish uchun quyidagi homiy kanallarga obuna bo'ling:",
             reply_markup=kb
         )
-    elif user["is_banned"]:
-        await message.answer("⚠️ Siz ushbu botdan foydalanishdan chetlatilgansiz.")
     else:
-        # Show Main Menu
+        # User is subscribed to all channels. If not verified in DB, verify them now.
+        if not user["is_verified"]:
+            await db.update_user(user_id, is_verified=True)
+            
+            # Award referrer if any
+            if user["referred_by"]:
+                ref_id = user["referred_by"]
+                referrer = await db.get_user(ref_id)
+                if referrer and not referrer["is_banned"]:
+                    pts_per_ref = int(await db.get_setting("points_per_referral", 1))
+                    new_points = referrer["points"] + pts_per_ref
+                    new_ref_count = (referrer.get("referral_count") or 0) + 1
+                    await db.update_user(ref_id, points=new_points, referral_count=new_ref_count)
+                    
+                    # Notify referrer
+                    try:
+                        await bot.send_message(
+                            chat_id=ref_id,
+                            text=f"🎉 Tabriklaymiz! Siz taklif qilgan {first_name} obunalarni tasdiqladi.\nSizning takliflaringiz soni +1 ga oshdi! Hozirgi takliflaringiz soni: {new_ref_count} ta."
+                        )
+                    except Exception as e:
+                        logger.warning(f"Could not notify referrer {ref_id}: {e}")
+
+        # Show Main Menu with referral link directly
+        ref_link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
         kb = await get_main_menu_keyboard(user_id)
         await message.answer(
-            f"Xush kelibsiz, {first_name}! Quyidagi menyulardan birini tanlang:",
+            f"Xush kelibsiz, {first_name}!\n\n"
+            f"🔗 <b>Sizning taklif havolangiz:</b>\n<code>{ref_link}</code>\n\n"
+            f"Ushbu havolani nusxalash uchun ustiga bosing va do'stlaringizga ulashing. Quyidagi menyulardan birini tanlang:",
+            parse_mode="HTML",
             reply_markup=kb
         )
 
@@ -238,18 +301,7 @@ async def callback_check_subs(callback: CallbackQuery, bot: Bot):
         return
 
     # Check subscriptions
-    channels = await db.get_active_channels()
-    unsubscribed = []
-    
-    for ch in channels:
-        ch_tg_id = ch["tg_id"]
-        try:
-            member = await bot.get_chat_member(chat_id=ch_tg_id, user_id=user_id)
-            if member.status in ['left', 'kicked']:
-                unsubscribed.append(ch)
-        except Exception as e:
-            logger.warning(f"Could not check membership in {ch_tg_id}: {e}")
-            unsubscribed.append(ch)
+    unsubscribed = await check_user_subscriptions(bot, user_id)
             
     if unsubscribed:
         unsub_names = ", ".join([c["title"] for c in unsubscribed])
@@ -277,21 +329,30 @@ async def callback_check_subs(callback: CallbackQuery, bot: Bot):
                 try:
                     await bot.send_message(
                         chat_id=ref_id,
-                        text=f"🎉 Tabriklaymiz! Siz taklif qilgan {callback.from_user.first_name} obunalarni tasdiqladi.\nSizga +{pts_per_ref} ball taqdim etildi! Hozirgi takliflaringiz soni: {new_ref_count} ta."
+                        text=f"🎉 Tabriklaymiz! Siz taklif qilgan {callback.from_user.first_name} obunalarni tasdiqladi.\nSizning takliflaringiz soni +1 ga oshdi! Hozirgi takliflaringiz soni: {new_ref_count} ta."
                     )
                 except Exception as e:
                     logger.warning(f"Could not notify referrer {ref_id}: {e}")
 
-    # Show main menu
+    # Show main menu along with their referral link directly in the message!
+    ref_link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
     kb = await get_main_menu_keyboard(user_id)
     await callback.message.edit_text(
-        text="A'zoligingiz muvaffaqiyatli tasdiqlandi. Botimizga xush kelibsiz!",
+        text=(
+            f"🎉 <b>A'zoligingiz muvaffaqiyatli tasdiqlandi!</b> Botimizga xush kelibsiz.\n\n"
+            f"🔗 <b>Sizning taklif havolangiz:</b>\n<code>{ref_link}</code>\n\n"
+            f"Ushbu havolani do'stlaringizga ulashing. Havolani nusxalash uchun ustiga bosing!"
+        ),
+        parse_mode="HTML",
         reply_markup=kb
     )
 
 @router.callback_query(F.data == "main_menu")
-async def callback_main_menu(callback: CallbackQuery, state: FSMContext):
+async def callback_main_menu(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await state.clear()
+    if await enforce_subscription(callback, bot):
+        return
+        
     user_id = callback.from_user.id
     kb = await get_main_menu_keyboard(user_id)
     await callback.message.edit_text(
@@ -300,7 +361,10 @@ async def callback_main_menu(callback: CallbackQuery, state: FSMContext):
     )
 
 @router.callback_query(F.data == "menu_referral")
-async def callback_referral(callback: CallbackQuery):
+async def callback_referral(callback: CallbackQuery, bot: Bot):
+    if await enforce_subscription(callback, bot):
+        return
+        
     user_id = callback.from_user.id
     user = await db.get_user(user_id)
     
@@ -311,11 +375,10 @@ async def callback_referral(callback: CallbackQuery):
     ref_count = await db.get_referrer_count(user_id)
     
     text = (
-        f"🎯 <b>Sizning Referral Ma'lumotlaringiz:</b>\n\n"
-        f"👥 Taklif etilgan faol do'stlaringiz: <b>{ref_count} ta</b>\n"
-        f"💰 Balans: <b>{user['points']} ball</b>\n\n"
+        f"🎯 <b>Sizning Taklif Ma'lumotlaringiz:</b>\n\n"
+        f"👥 Taklif etilgan faol do'stlaringiz: <b>{ref_count} ta</b>\n\n"
         f"🔗 Taklif havolangiz:\n<code>{ref_link}</code>\n\n"
-        f"Havolani nusxalash uchun ustiga bosing. Do'stlaringizni taklif qiling va mukofot ballarini jamlang!"
+        f"Havolani nusxalash uchun ustiga bosing. Do'stlaringizni taklif qiling va yopiq kursni oching!"
     )
     
     await callback.message.edit_text(
@@ -324,51 +387,14 @@ async def callback_referral(callback: CallbackQuery):
         reply_markup=get_back_keyboard()
     )
 
-@router.callback_query(F.data == "menu_bonus")
-async def callback_bonus(callback: CallbackQuery):
-    user_id = callback.from_user.id
-    user = await db.get_user(user_id)
-    
-    if not user:
-        return
-        
-    now = datetime.now(timezone.utc)
-    last_claim = user.get("last_bonus_claim")
-    
-    can_claim = True
-    time_remaining_str = ""
-    
-    if last_claim:
-        last_claim_dt = datetime.fromisoformat(last_claim.replace("Z", "+00:00"))
-        time_passed = now - last_claim_dt
-        if time_passed < timedelta(hours=24):
-            can_claim = False
-            remaining = timedelta(hours=24) - time_passed
-            hours, remainder = divmod(remaining.seconds, 3600)
-            minutes, seconds = divmod(remainder, 60)
-            time_remaining_str = f"{hours}h {minutes}m"
-            
-    if not can_claim:
-        await callback.answer(f"Kunlik bonusni olish uchun yana {time_remaining_str} kutishingiz kerak.", show_alert=True)
-        return
-        
-    bonus_pts = int(await db.get_setting("daily_bonus_points", 1))
-    new_points = user["points"] + bonus_pts
-    
-    await db.update_user(user_id, points=new_points, last_bonus_claim=now.isoformat())
-    await callback.answer(f"Tabriklaymiz! Sizga +{bonus_pts} bonus ball berildi. 🎉", show_alert=True)
-    
-    kb = await get_main_menu_keyboard(user_id)
-    await callback.message.edit_text(
-        text=f"Bonus qabul qilindi. Sizning joriy balansingiz: {new_points} ball.",
-        reply_markup=kb
-    )
-
 @router.callback_query(F.data == "menu_leaderboard")
-async def callback_leaderboard(callback: CallbackQuery):
+async def callback_leaderboard(callback: CallbackQuery, bot: Bot):
+    if await enforce_subscription(callback, bot):
+        return
+        
     leaderboard = await db.get_leaderboard(10)
     
-    text = "🏆 <b>TOP 10 Konkurs Ishtirokchilari:</b>\n\n"
+    text = "🏆 <b>TOP 10 Ishtirokchilar (Ko'p do'st taklif qilganlar):</b>\n\n"
     medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
     
     if not leaderboard:
@@ -379,10 +405,19 @@ async def callback_leaderboard(callback: CallbackQuery):
             name = row.get("first_name", "Ishtirokchi")
             username_str = f" (@{row['username']})" if row.get("username") else ""
             points = row.get("points", 0)
-            text += f"{medal} <b>{name}</b>{username_str} — <b>{points} ball</b>\n"
+            text += f"{medal} <b>{name}</b>{username_str} — <b>{points} ta taklif</b>\n"
             
-    await callback.message.edit_text(@router.callback_query(F.data == "menu_course")
+    await callback.message.edit_text(
+        text=text,
+        parse_mode="HTML",
+        reply_markup=get_back_keyboard()
+    )
+
+@router.callback_query(F.data == "menu_course")
 async def callback_course(callback: CallbackQuery, bot: Bot):
+    if await enforce_subscription(callback, bot):
+        return
+        
     user_id = callback.from_user.id
     user = await db.get_user(user_id)
     

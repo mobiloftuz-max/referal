@@ -37,6 +37,7 @@ export default function App() {
   // UI states
   const [feedbackMsg, setFeedbackMsg] = useState({ text: '', type: '' });
   const [perfClass, setPerfClass] = useState('high'); // low | average | high
+  const [showDebug, setShowDebug] = useState(false);
 
   // Admin IDs list
   const adminIds = (import.meta.env.VITE_ADMIN_IDS || '8544023815')
@@ -54,6 +55,11 @@ export default function App() {
       setPerfClass('high');
     }
 
+    // Check debug mode
+    if (window.location.search.includes('debug=true')) {
+      setShowDebug(true);
+    }
+
     // 2. Telegram WebApp initialization
     const tg = window.Telegram?.WebApp;
     if (tg) {
@@ -64,13 +70,13 @@ export default function App() {
         loadUser(tg.initDataUnsafe.user.id, tg.initDataUnsafe.user);
       } else {
         setIsMockMode(true);
-        const defaultMock = 8544023815;
+        const defaultMock = 999999999;
         setTgUser({ id: defaultMock, first_name: 'Mock User', username: 'mock_user' });
         loadUser(defaultMock, { first_name: 'Mock User', username: 'mock_user' });
       }
     } else {
       setIsMockMode(true);
-      const defaultMock = 8544023815;
+      const defaultMock = 999999999;
       setTgUser({ id: defaultMock, first_name: 'Mock User', username: 'mock_user' });
       loadUser(defaultMock, { first_name: 'Mock User', username: 'mock_user' });
     }
@@ -318,7 +324,7 @@ export default function App() {
         .eq('telegram_id', userTgId);
         
       if (!error) {
-        showFeedback("+1 taklif va ball qo'shildi!", 'success');
+        showFeedback("+1 taklif qo'shildi!", 'success');
         loadAdminData();
       }
     }
@@ -384,7 +390,7 @@ export default function App() {
       )}
 
       {/* Mock Mode Control Bar */}
-      {isMockMode && (
+      {isMockMode && showDebug && (
         <div className="bg-white/80 border-b border-rose-100 px-4 py-2 flex flex-col gap-2 text-[10px]">
           <div className="flex justify-between items-center text-rose-600 font-bold">
             <span>💻 Brauzer testi: Mock interfeysi faol</span>
