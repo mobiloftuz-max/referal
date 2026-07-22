@@ -246,7 +246,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         kb = await get_subscription_keyboard(bot, user_id)
         await message.answer(
             text=(
-                f"👋 <b>Assalomu alaykum, {first_name}!</b>\n\n"
+                f"<tg-emoji emoji-id='5472055112702629499'>👋</tg-emoji> <b>Assalomu alaykum, {first_name}!</b>\n\n"
                 f"⚠️ <b>Botdan to'liq foydalanish uchun homiy kanallarga obuna bo'lishingiz lozim:</b>\n\n"
                 f"Siz a'zo bo'lmagan kanallar 🔴 rangda, a'zo bo'lganlaringiz esa 🟢 rangda ko'rsatilgan. "
                 f"Barcha kanallarga a'zo bo'lib, keyin <b>Obunani tekshirish</b> tugmasini bosing. 👇"
@@ -283,11 +283,12 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         kb = await get_main_menu_keyboard(user_id)
         await message.answer(
             text=(
-                f"👋 <b>Assalomu alaykum, {first_name}!</b>\n\n"
-                f"Bizning botga xush kelibsiz! Bu yerda do'stlaringizni taklif qilib, yopiq kursimizga mutlaqo <b>bepul</b> kirish huquqini qo'lga kiritishingiz mumkin. ✨\n\n"
-                f"🔗 <b>Sizning shaxsiy taklif havolangiz:</b>\n<code>{ref_link}</code>\n\n"
-                f"<i>💡 Havolani do'stlaringizga yuboring. Ular botga kirib, homiy kanallarga obuna bo'lishsa, sizga ball yoziladi.</i>\n\n"
-                f"👇 Quyidagi menyudan kerakli bo'limni tanlang:"
+                f"<tg-emoji emoji-id='5472055112702629499'>👋</tg-emoji> <b>Assalomu alaykum, {first_name}!</b>\n\n"
+                f"Bizning botga xush kelibsiz! Bu yerda do'stlaringizni taklif qilib, yopiq kursimizga mutlaqo <b>bepul</b> kirish huquqini qo'lga kiritishingiz mumkin. <tg-emoji emoji-id='5325547803936572038'>🎉</tg-emoji>\n\n"
+                f"<tg-emoji emoji-id='5118489535130371328'>🔗</tg-emoji> <b>Sizning shaxsiy taklif havolangiz:</b>\n"
+                f"<code>{ref_link}</code>\n\n"
+                f"<tg-emoji emoji-id='5213395028038132311'>📢</tg-emoji> Havolani do'stlaringizga yuboring. Ular botga kirib, homiy kanallarga obuna bo'lishsa, sizga ball yoziladi.\n\n"
+                f"<tg-emoji emoji-id='5406745015365943482'>📌</tg-emoji> Quyidagi menyudan kerakli bo'limni tanlang:"
             ),
             parse_mode="HTML",
             reply_markup=kb
@@ -446,8 +447,8 @@ async def callback_check_subs(callback: CallbackQuery, bot: Bot):
     kb = await get_main_menu_keyboard(user_id)
     await callback.message.edit_text(
         text=(
-            f"🎉 <b>A'zoligingiz muvaffaqiyatli tasdiqlandi!</b> Botimizga xush kelibsiz.\n\n"
-            f"🔗 <b>Sizning taklif havolangiz:</b>\n<code>{ref_link}</code>\n\n"
+            f"<tg-emoji emoji-id='5325547803936572038'>🎉</tg-emoji> <b>A'zoligingiz muvaffaqiyatli tasdiqlandi!</b> Botimizga xush kelibsiz.\n\n"
+            f"<tg-emoji emoji-id='5118489535130371328'>🔗</tg-emoji> <b>Sizning taklif havolangiz:</b>\n<code>{ref_link}</code>\n\n"
             f"Ushbu havolani do'stlaringizga ulashing. Havolani nusxalash uchun ustiga bosing!"
         ),
         parse_mode="HTML",
@@ -507,7 +508,7 @@ async def callback_referral(callback: CallbackQuery, bot: Bot):
         f"Do'stlaringizni botimizga taklif qiling va yopiq darslarga bepul kirish imkoniyatini qo'lga kiriting!\n\n"
         f"📊 <b>Sizning ko'rsatkichlaringiz:</b>\n"
         f"└ Taklif etilgan faol do'stlaringiz: <b>{ref_count} ta</b>\n\n"
-        f"🔗 <b>Sizning taklif havolangiz:</b>\n"
+        f"<tg-emoji emoji-id='5118489535130371328'>🔗</tg-emoji> <b>Sizning taklif havolangiz:</b>\n"
         f"<code>{ref_link}</code>\n\n"
         f"<i>💡 Ustiga bossangiz havolani nusxalaydi. Do'stlaringizga yoki guruhlarga pastdagi ko'k tugma orqali osongina yuborishingiz mumkin.</i>"
     )
@@ -665,7 +666,7 @@ async def callback_course(callback: CallbackQuery, bot: Bot):
             f"📊 <b>Sizning ko'rsatkichlaringiz:</b>\n"
             f"├ Taklif etilgan faol a'zolar: <b>{effective_count} ta</b>\n"
             f"└ Kursni ochish uchun yana: <b>{threshold - effective_count} ta</b> taklif kerak\n\n"
-            f"🔗 <b>Sizning taklif havolangiz:</b>\n<code>{ref_link}</code>\n\n"
+            f"<tg-emoji emoji-id='5118489535130371328'>🔗</tg-emoji> <b>Sizning taklif havolangiz:</b>\n<code>{ref_link}</code>\n\n"
             f"Do'stlaringizni taklif qiling va kursga bepul kirish huquqini qo'lga kiriting!"
         )
         keyboard = InlineKeyboardMarkup(inline_keyboard=[

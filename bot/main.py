@@ -6,6 +6,8 @@ from http.server import SimpleHTTPRequestHandler, HTTPServer
 from dotenv import load_dotenv
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from handlers import router
 
@@ -48,7 +50,7 @@ def start_dummy_server():
 
 async def main():
     # Initialize Bot and Dispatcher
-    bot = Bot(token=BOT_TOKEN)
+    bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
     
     # Register router
