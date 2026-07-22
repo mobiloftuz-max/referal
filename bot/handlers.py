@@ -247,9 +247,9 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
         await message.answer(
             text=(
                 f"<tg-emoji emoji-id='5472055112702629499'>👋</tg-emoji> <b>Assalomu alaykum, {first_name}!</b>\n\n"
-                f"⚠️ <b>Botdan to'liq foydalanish uchun homiy kanallarga obuna bo'lishingiz lozim:</b>\n\n"
-                f"Siz a'zo bo'lmagan kanallar 🔴 rangda, a'zo bo'lganlaringiz esa 🟢 rangda ko'rsatilgan. "
-                f"Barcha kanallarga a'zo bo'lib, keyin <b>Obunani tekshirish</b> tugmasini bosing. 👇"
+                f"<tg-emoji emoji-id='5447644880824181073'>⚠️</tg-emoji> <b>Botdan to'liq foydalanish uchun homiy kanallarga obuna bo'lishingiz lozim:</b>\n\n"
+                f"Siz a'zo bo'lmagan kanallar <tg-emoji emoji-id='5465665476971471368'>🔴</tg-emoji> rangda, a'zo bo'lganlaringiz esa <tg-emoji emoji-id='5424998570539373838'>🟢</tg-emoji> rangda ko'rsatilgan. "
+                f"Barcha kanallarga a'zo bo'lib, keyin <b>Obunani tekshirish</b> tugmasini bosing. <tg-emoji emoji-id='5470177992950946662'>👇</tg-emoji>"
             ),
             parse_mode="HTML",
             reply_markup=kb
@@ -504,13 +504,13 @@ async def callback_referral(callback: CallbackQuery, bot: Bot):
     share_url = f"https://t.me/share/url?url={quote(ref_link)}&text={quote(sharing_text)}"
     
     text = (
-        f"👥 <b>Do'stlarni Taklif Qilish Tizimi</b>\n\n"
+        f"<tg-emoji emoji-id='5453957997418004470'>👥</tg-emoji> <b>Do'stlarni Taklif Qilish Tizimi</b>\n\n"
         f"Do'stlaringizni botimizga taklif qiling va yopiq darslarga bepul kirish imkoniyatini qo'lga kiriting!\n\n"
-        f"📊 <b>Sizning ko'rsatkichlaringiz:</b>\n"
+        f"<tg-emoji emoji-id='5231200819986047254'>📊</tg-emoji> <b>Sizning ko'rsatkichlaringiz:</b>\n"
         f"└ Taklif etilgan faol do'stlaringiz: <b>{ref_count} ta</b>\n\n"
-        f"<tg-emoji emoji-id='5118489535130371328'>🔗</tg-emoji> <b>Sizning taklif havolangiz:</b>\n"
+        f"<tg-emoji emoji-id='5271604874419647061'>🔗</tg-emoji> <b>Sizning taklif havolangiz:</b>\n"
         f"<code>{ref_link}</code>\n\n"
-        f"<i>💡 Ustiga bossangiz havolani nusxalaydi. Do'stlaringizga yoki guruhlarga pastdagi ko'k tugma orqali osongina yuborishingiz mumkin.</i>"
+        f"<i><tg-emoji emoji-id='5467397594332275071'>💡</tg-emoji> Ustiga bossangiz havolani nusxalaydi. Do'stlaringizga yoki guruhlarga pastdagi ko'k tugma orqali osongina yuborishingiz mumkin.</i>"
     )
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -571,16 +571,21 @@ async def callback_leaderboard(callback: CallbackQuery, bot: Bot):
     leaderboard = await db.get_leaderboard(10)
     
     text = (
-        f"🏆 <b>Reyting Jadvali (TOP 10)</b>\n"
+        f"<tg-emoji emoji-id='5409008750893734809'>🏆</tg-emoji> <b>Reyting Jadvali (TOP 10)</b>\n"
         f"Eng ko'p do'st taklif qilgan faol ishtirokchilar ro'yxati:\n\n"
     )
-    medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
+    medals = [
+        "<tg-emoji emoji-id='5440539497383087970'>🥇</tg-emoji>",
+        "<tg-emoji emoji-id='5447203607294265305'>🥈</tg-emoji>",
+        "<tg-emoji emoji-id='5453902265922376865'>🥉</tg-emoji>",
+        "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"
+    ]
     
     if not leaderboard:
         text += "<i>Hozircha faol ishtirokchilar mavjud emas. Birinchilardan bo'ling!</i>"
     else:
         for idx, row in enumerate(leaderboard):
-            medal = medals[idx] if idx < len(medals) else f"•"
+            medal = medals[idx] if idx < len(medals) else "•"
             name = row.get("first_name", "Ishtirokchi")
             masked_name = mask_text(name)
             masked_name = masked_name.replace("<", "&lt;").replace(">", "&gt;")
@@ -590,7 +595,7 @@ async def callback_leaderboard(callback: CallbackQuery, bot: Bot):
             points = row.get("points", 0)
             text += f"{medal} <b>{masked_name}</b>{username_str} — <b>{points}</b> ta taklif\n"
             
-    text += f"\n\n👥 <i>Siz ham do'stlaringizni taklif qilib, reyting tepasiga ko'tariling!</i>"
+    text += f"\n\n<tg-emoji emoji-id='5453957997418004470'>🚀</tg-emoji> <i>Siz ham do'stlaringizni taklif qilib, reyting tepasiga ko'tariling!</i>"
             
     await callback.message.edit_text(
         text=text,
@@ -627,9 +632,9 @@ async def callback_course(callback: CallbackQuery, bot: Bot):
         fallback_link = await db.get_setting("private_channel_link")
         if fallback_link:
             text = (
-                f"🎉 <b>Tabriklaymiz! Kursga bepul kirish imkoniyatingiz ochildi!</b>\n\n"
+                f"<tg-emoji emoji-id='5436040291507247633'>🎉</tg-emoji> <b>Tabriklaymiz! Kursga bepul kirish imkoniyatingiz ochildi!</b>\n\n"
                 f"Siz muvaffaqiyatli taklif qildingiz: <b>{effective_count} / {threshold}</b> ta do'st.\n\n"
-                f"👇 Kursni boshlash uchun pastdagi yashil tugmani bosing va kanalga a'zo bo'lish so'rovini yuboring (Request to join):"
+                f"<tg-emoji emoji-id='5470177992950946662'>👇</tg-emoji> Kursni boshlash uchun pastdagi yashil tugmani bosing va kanalga a'zo bo'lish so'rovini yuboring (Request to join):"
             )
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
                 [
@@ -663,10 +668,10 @@ async def callback_course(callback: CallbackQuery, bot: Bot):
         text = (
             f"🔒 <b>Kurs yopiq kanalda joylashgan!</b>\n\n"
             f"Kursga kirish uchun siz kamida <b>{threshold} ta</b> do'stingizni taklif qilishingiz zarur.\n\n"
-            f"📊 <b>Sizning ko'rsatkichlaringiz:</b>\n"
+            f"<tg-emoji emoji-id='5231200819986047254'>📊</tg-emoji> <b>Sizning ko'rsatkichlaringiz:</b>\n"
             f"├ Taklif etilgan faol a'zolar: <b>{effective_count} ta</b>\n"
             f"└ Kursni ochish uchun yana: <b>{threshold - effective_count} ta</b> taklif kerak\n\n"
-            f"<tg-emoji emoji-id='5118489535130371328'>🔗</tg-emoji> <b>Sizning taklif havolangiz:</b>\n<code>{ref_link}</code>\n\n"
+            f"<tg-emoji emoji-id='5271604874419647061'>🔗</tg-emoji> <b>Sizning taklif havolangiz:</b>\n<code>{ref_link}</code>\n\n"
             f"Do'stlaringizni taklif qiling va kursga bepul kirish huquqini qo'lga kiriting!"
         )
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
