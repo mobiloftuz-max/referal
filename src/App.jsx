@@ -560,7 +560,7 @@ export default function App() {
                 <div className="bg-white/70 border border-white/40 p-5 rounded-[32px] space-y-4 shadow-lg shadow-pink-100/20">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <Users className="text-rose-500" size={16} />
+                      <img src="/icons/custom_link_emoji.webp" alt="Link" className="w-5 h-5 object-contain inline-block" />
                       <span className="text-xs font-extrabold text-slate-700">Taklif Havolasi</span>
                     </div>
                     <span className="bg-rose-50 text-rose-600 px-2 py-0.5 rounded text-[8px] font-extrabold">Havolangiz</span>
